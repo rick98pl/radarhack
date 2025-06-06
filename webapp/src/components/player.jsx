@@ -47,7 +47,12 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
     y: radarImageBounding.height * effectivePosition.y - playerBounding.height * 0.5,
   };
 
+if (playerData.m_is_dead) {
+  return null;
+}
+
   return (
+    
     <div
       className={`absolute origin-center rounded-[100%] left-0 top-0`}
       ref={playerRef}
@@ -61,15 +66,66 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
       }}
     >
       {/* Name above the dot - outside rotation container */}
-      {(settings.showAllNames && playerData.m_team === localTeam) ||
-        (settings.showEnemyNames && playerData.m_team !== localTeam) ? (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 text-center">
-          <span className="text-xs text-white whitespace-nowrap max-w-[80px] inline-block overflow-hidden text-ellipsis">
-            {playerData.m_name}
-          </span>
-        </div>
-      ) : null}
+     {/* {(settings.showAllNames && playerData.m_team === localTeam) ||
+  (settings.showEnemyNames && playerData.m_team !== localTeam) ? (
+  <div className="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 text-center">
+    <span className="text-xs text-white whitespace-nowrap max-w-[80px] inline-block overflow-hidden text-ellipsis">
+      {playerData.m_name}
+    </span>
+  </div>
+) : null} */}
 
+{/* Multiple pulsing aureolas for THE_SMURF */}
+{playerData.m_name === 'THE_SMURF' && (
+  <>
+    {/* Inner aureola */}
+    <div 
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-400"
+      style={{
+        width: `${scaledSize * 2}vw`,
+        height: `${scaledSize * 2}vw`,
+        animation: 'customPulse 1.5s infinite'
+      }}
+    />
+    
+    {/* Middle aureola */}
+    <div 
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-300"
+      style={{
+        width: `${scaledSize * 3}vw`,
+        height: `${scaledSize * 3}vw`,
+        animation: 'customPulse 1.5s infinite 0.3s'
+      }}
+    />
+    
+    {/* Outer aureola */}
+    <div 
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-200"
+      style={{
+        width: `${scaledSize * 4}vw`,
+        height: `${scaledSize * 4}vw`,
+        animation: 'customPulse 1.5s infinite 0.6s'
+      }}
+    />
+    
+    <style jsx>{`
+      @keyframes customPulse {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          opacity: 0.3;
+          transform: translate(-50%, -50%) scale(1.2);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+    `}</style>
+  </>
+)}
       {/* Rotating container for player elements */}
       <div
         style={{
@@ -83,17 +139,19 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         {/* Player dot */}
         <div
           className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg]`}
-          style={{
-
-            backgroundColor: `${(playerData.m_team == localTeam && playerColors[playerData.m_color]) || `red`}`,
-            opacity: `${(playerData.m_is_dead && `0.8`) || (invalidPosition && `0`) || `1`}`,
-          }}
+         style={{
+  backgroundColor: `${
+    playerData.m_name === 'THE_SMURFx' ? '#00ff00' : // Green for THE_SMURF
+    (playerData.m_team == localTeam && playerColors[playerData.m_color]) || 
+    `red`
+  }`,
+}}
         />
 
         {/* View cone (kept exactly as it was) */}
         {settings.showViewCones && !playerData.m_is_dead && (
           <div
-            className="absolute left-1/2 top-1/2 w-[1.5vw] h-[3vw] bg-white opacity-30"
+            className="absolute left-1/2 top-1/2 w-[6vw] h-[12vw] bg-white opacity-30"
             style={{
               transform: `translate(-50%, 5%) rotate(0deg)`,
               clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",

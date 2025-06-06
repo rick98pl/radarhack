@@ -18,30 +18,30 @@ const PlayerCard = ({ playerData, isOnRightSide }) => {
       <div
         className={`flex flex-col gap-[0.375rem] justify-center items-center`}
       >
-        <div
-          className={`hover:cursor-pointer`}
-          onClick={() =>
-            window.open(
-              `https://steamcommunity.com/profiles/${playerData.m_steam_id}`,
-              "_blank",
-              "noopener,noreferrer"
-            )
-          }
-        >
-          {playerData.m_name}
-        </div>
-        <div
-          className={`w-0 h-0 border-solid border-t-[12px] border-r-[8px] border-b-[12px] border-l-[8px]`}
-          style={{
-            borderColor: `${
-              playerColors[playerData.m_color]
-            } transparent transparent transparent`,
-          }}
-        ></div>
-        <img
-          className={`h-[8rem] ${isOnRightSide && `scale-x-[-1]`}`}
-          src={`./assets/characters/${modelName}.png`}
-        ></img>
+        {/* <div
+  className={`hover:cursor-pointer`}
+  onClick={() =>
+    window.open(
+      `https://steamcommunity.com/profiles/${playerData.m_steam_id}`,
+      "_blank",
+      "noopener,noreferrer"
+    )
+  }
+>
+  {playerData.m_name}
+</div> */}
+        {/* <div
+  className={`w-0 h-0 border-solid border-t-[12px] border-r-[8px] border-b-[12px] border-l-[8px]`}
+  style={{
+    borderColor: `${
+      playerColors[playerData.m_color]
+    } transparent transparent transparent`,
+  }}
+></div> */}
+        {/* <img
+  className={`h-[8rem] ${isOnRightSide && `scale-x-[-1]`}`}
+  src={`./assets/characters/${modelName}.png`}
+></img> */}
       </div>
 
       <div

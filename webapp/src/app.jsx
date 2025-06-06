@@ -18,16 +18,16 @@ const PORT = 22006;
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
 
 const DEFAULT_SETTINGS = {
-  dotSize: 1,
-  bombSize: 0.5,
+  dotSize: 6,
+  bombSize: 4,
   showAllNames: false,
-  showEnemyNames: true,
-  showViewCones: false,
+  showEnemyNames: false,
+  showViewCones: true,
 };
 
 const loadSettings = () => {
   const savedSettings = localStorage.getItem("radarSettings");
-  return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
+  return DEFAULT_SETTINGS;
 };
 
 const App = () => {
@@ -149,58 +149,61 @@ const App = () => {
         </div>
       )}
 
-      <div className={`flex items-center justify-evenly`}>
+      <div className={`flex items-center justify-center`}>
         <Latency
          value={averageLatency}
          settings={settings}
          setSettings={setSettings}
         />
 
-        <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
-          {playerArray
-            .filter((player) => player.m_team == 2)
-            .map((player) => (
-              <PlayerCard
-                right={false}
-                key={player.m_idx}
-                playerData={player}
-              />
-            ))}
-        </ul>
+{ <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
+  {playerArray
+    .filter((player) => player.m_team == 2)
+    .map((player) => (
+      <PlayerCard
+        right={false}
+        key={player.m_idx}
+        playerData={player}
+      />
+    ))}
+</ul> }
 
-        {(playerArray.length > 0 && mapData && (
-          <Radar
-            playerArray={playerArray}
-            radarImage={`./data/${mapData.name}/radar.png`}
-            mapData={mapData}
-            localTeam={localTeam}
-            averageLatency={averageLatency}
-            bombData={bombData}
-            settings={settings}
-          />
-        )) || (
-            <div id="radar" className={`relative overflow-hidden origin-center`}>
-              <h1 className="radar_message">
-                Connected! Waiting for data from usermode
-              </h1>
-            </div>
-          )}
+         {/* Zoomed radar container */}
+  <div style={{transform: 'scale(1.0)', transformOrigin: 'center'}}>
+    {(playerArray.length > 0 && mapData && (
+      <Radar
+        playerArray={playerArray}
+        radarImage={`./data/${mapData.name}/radar.png`}
+        mapData={mapData}
+        localTeam={localTeam}
+        averageLatency={averageLatency}
+        bombData={bombData}
+        settings={settings}
+      />
+    )) || (
+      <div id="radar" className={`relative overflow-hidden origin-center`}>
+        <h1 className="radar_message">
+          Connected! Waiting for data from usermode
+        </h1>
+      </div>
+    )}</div>
 
-        <ul
-          id="counterTerrorist"
-          className="lg:flex hidden flex-col gap-7 m-0 p-0"
-        >
-          {playerArray
-            .filter((player) => player.m_team == 3)
-            .map((player) => (
-              <PlayerCard
-                right={true}
-                key={player.m_idx}
-                playerData={player}
-                settings={settings}
-              />
-            ))}
-        </ul>
+{ <ul
+  id="counterTerrorist"
+  className="lg:flex hidden flex-col gap-7 m-0 p-0"
+>
+  {playerArray
+    .filter((player) => player.m_team == 3)
+    .map((player) => (
+      <PlayerCard
+        right={true}
+        key={player.m_idx}
+        playerData={player}
+        settings={settings}
+      />
+    ))}
+</ul> }
+
       </div>
     </div>
   );

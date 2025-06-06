@@ -16,6 +16,6 @@ body {
   margin: 0;
   font-family: "TASAOrbiter";
   color: var(--text-primary);
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-image: none !important;
+  background: none !important;
 }

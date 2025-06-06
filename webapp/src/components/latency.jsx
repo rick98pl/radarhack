@@ -28,7 +28,8 @@ export const getLatency = () => {
 };
 
 export const Latency = ({ value, settings, setSettings }) => {
-  return (
+  return null;
+  /* return (
     <div className={`flex gap-2 absolute text-[normal] right-2.5 top-2.5`}>
       <div className={'flex gap-1'}>
         <img className={`w-[1.3rem]`} src={`./assets/icons/gauge.svg`} />
@@ -37,5 +38,5 @@ export const Latency = ({ value, settings, setSettings }) => {
 
       <SettingsButton settings={settings} onSettingsChange={setSettings} />
     </div>
-  );
+  ); */
 };
