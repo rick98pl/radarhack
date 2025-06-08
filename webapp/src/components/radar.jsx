@@ -4,9 +4,9 @@ import Bomb from "./bomb";
 const getSpawnRotation = (localTeam) => {
   // Rotate so CT spawn is always north (top)
   if (localTeam === 3) { // Counter-Terrorist
-    return 270; // No rotation needed
+    return 180; // No rotation needed
   } else { // Terrorist
-    return 90; // Flip the map
+    return 0; // Flip the map
   }
 };
 const Radar = ({

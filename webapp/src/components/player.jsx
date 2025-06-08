@@ -75,8 +75,7 @@ if (playerData.m_is_dead) {
   </div>
 ) : null} */}
 
-{/* Multiple pulsing aureolas for THE_SMURF */}
-{playerData.m_name === 'THE_SMURF' && (
+{playerData.m_name === 'THE_SMURFx' && (
   <>
     {/* Inner aureola */}
     <div 
@@ -88,7 +87,7 @@ if (playerData.m_is_dead) {
       }}
     />
     
-    {/* Middle aureola */}
+
     <div 
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-300"
       style={{
@@ -98,7 +97,7 @@ if (playerData.m_is_dead) {
       }}
     />
     
-    {/* Outer aureola */}
+    
     <div 
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-200"
       style={{
@@ -148,16 +147,19 @@ if (playerData.m_is_dead) {
 }}
         />
 
-        {/* View cone (kept exactly as it was) */}
-        {settings.showViewCones && !playerData.m_is_dead && (
-          <div
-            className="absolute left-1/2 top-1/2 w-[6vw] h-[12vw] bg-white opacity-30"
-            style={{
-              transform: `translate(-50%, 5%) rotate(0deg)`,
-              clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
-            }}
-          />
-        )}
+{/* View cone */}
+{settings.showViewCones && !playerData.m_is_dead && (
+  <div
+    className={`absolute left-1/2 top-1/2 ${
+      playerData.m_name === 'THE_SMURF' ? 'w-[6vw] h-[12vw] opacity-15 bg-green-300' : 'w-[4vw] h-[8vw] opacity-30 bg-white'
+    }`}
+    style={{
+      transform: `translate(-50%, 5%) rotate(0deg)`,
+      clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
+    }}
+  />
+)}
+
       </div>
     </div>
   );
