@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { getRadarPosition, playerColors } from "../utilities/utilities";
-
+import MaskedIcon from "./maskedicon";
 
 let playerRotations = [];
 const calculatePlayerRotation = (playerData) => {
@@ -53,6 +53,18 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
   // Cap health and armor at 100
   const safeHealth = Math.min(100, Math.max(0, playerData.m_health || 0));
 
+  // Get weapon to display (primary weapon or fallback to secondary)
+  const getWeaponToDisplay = () => {
+    if (playerData.m_weapons?.m_primary) {
+      return playerData.m_weapons.m_primary;
+    } else if (playerData.m_weapons?.m_secondary) {
+      return playerData.m_weapons.m_secondary;
+    }
+    return null;
+  };
+
+  const weaponToDisplay = getWeaponToDisplay();
+
   // Calculate the total rotation (spawn rotation + user rotation offset)
   const getSpawnRotation = (localTeam, rotationOffset = 0) => {
     let offset = 180;
@@ -68,7 +80,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
   // Calculate offset based on map rotation to keep HP above dot
   const getHPOffset = () => {
     const angle = (totalMapRotation * Math.PI) / 180; // Convert to radians
-    const distance = 20; // Reduced distance from dot center
+    const distance = 20; // Distance from dot center
     return {
       x: Math.sin(angle) * distance,
       y: -Math.cos(angle) * distance
@@ -77,12 +89,11 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
 
   const hpOffset = getHPOffset();
 
-if (playerData.m_is_dead) {
-  return null;
-}
+  if (playerData.m_is_dead) {
+    return null;
+  }
 
   return (
-    
     <div
       className={`absolute origin-center rounded-[100%] left-0 top-0`}
       ref={playerRef}
@@ -112,66 +123,29 @@ if (playerData.m_is_dead) {
         </div>
       )}
 
-      {/* Name above the dot - outside rotation container */}
-     {/* {(settings.showAllNames && playerData.m_team === localTeam) ||
-  (settings.showEnemyNames && playerData.m_team !== localTeam) ? (
-  <div className="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 text-center">
-    <span className="text-xs text-white whitespace-nowrap max-w-[80px] inline-block overflow-hidden text-ellipsis">
-      {playerData.m_name}
-    </span>
-  </div>
-) : null} */}
+      {/* Weapon icon for enemy players - positioned next to HP */}
+      {isEnemy && !playerData.m_is_dead && weaponToDisplay && (
+        <div 
+          className="absolute pointer-events-none flex items-center justify-center"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${hpOffset.x + 35}px), calc(-50% + ${hpOffset.y}px)) rotate(${-totalMapRotation}deg)`,
+            zIndex: 15,
+            width: '32px',
+            height: '28px'
+          }}
+        >
+          <div className="bg-black/50 rounded px-1 py-1 flex items-center justify-center min-w-[28px] min-h-[24px]">
+            <MaskedIcon
+              path={`./assets/icons/${weaponToDisplay}.svg`}
+              height={24}
+              color="bg-yellow-400"
+            />
+          </div>
+        </div>
+      )}
 
-{playerData.m_name === 'THE_SMURFx' && (
-  <>
-    {/* Inner aureola */}
-    <div 
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-400"
-      style={{
-        width: `${scaledSize * 2}vw`,
-        height: `${scaledSize * 2}vw`,
-        animation: 'customPulse 1.5s infinite'
-      }}
-    />
-    
-
-    <div 
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-300"
-      style={{
-        width: `${scaledSize * 3}vw`,
-        height: `${scaledSize * 3}vw`,
-        animation: 'customPulse 1.5s infinite 0.3s'
-      }}
-    />
-    
-    
-    <div 
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-200"
-      style={{
-        width: `${scaledSize * 4}vw`,
-        height: `${scaledSize * 4}vw`,
-        animation: 'customPulse 1.5s infinite 0.6s'
-      }}
-    />
-    
-    <style jsx>{`
-      @keyframes customPulse {
-        0% {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-        50% {
-          opacity: 0.3;
-          transform: translate(-50%, -50%) scale(1.2);
-        }
-        100% {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-      }
-    `}</style>
-  </>
-)}
       {/* Rotating container for player elements */}
       <div
         style={{
@@ -185,28 +159,27 @@ if (playerData.m_is_dead) {
         {/* Player dot */}
         <div
           className={`w-full h-full rounded-[50%_50%_50%_0%] rotate-[315deg]`}
-         style={{
-  backgroundColor: `${
-    playerData.m_name === 'THE_SMURFx' ? '#00ff00' : // Green for THE_SMURF
-    (playerData.m_team == localTeam && playerColors[playerData.m_color]) || 
-    `red`
-  }`,
-}}
+          style={{
+            backgroundColor: `${
+              playerData.m_name?.includes('MUTED') ? '#00ff00' : // Green for names containing MUTED
+              (playerData.m_team == localTeam && playerColors[playerData.m_color]) || 
+              `red`
+            }`,
+          }}
         />
 
-{/* View cone */}
-{settings.showViewCones && !playerData.m_is_dead && (
-  <div
-    className={`absolute left-1/2 top-1/2 ${
-      playerData.m_name.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-15 bg-green-300' : 'w-[4vw] h-[8vw] opacity-30 bg-white'
-    }`}
-    style={{
-      transform: `translate(-50%, 5%) rotate(0deg)`,
-      clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
-    }}
-  />
-)}
-
+        {/* View cone */}
+        {settings.showViewCones && !playerData.m_is_dead && (
+          <div
+            className={`absolute left-1/2 top-1/2 ${
+              playerData.m_name?.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-15 bg-green-300' : 'w-[4vw] h-[8vw] opacity-30 bg-white'
+            }`}
+            style={{
+              transform: `translate(-50%, 5%) rotate(0deg)`,
+              clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
+            }}
+          />
+        )}
       </div>
     </div>
   );
