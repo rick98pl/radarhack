@@ -25,23 +25,19 @@ const DEFAULT_SETTINGS = {
   showViewCones: true,
 };
 
-const loadSettings = () => {
-  const savedSettings = localStorage.getItem("radarSettings");
-  return DEFAULT_SETTINGS;
-};
-
 const App = () => {
   const [averageLatency, setAverageLatency] = useState(0);
   const [playerArray, setPlayerArray] = useState([]);
   const [mapData, setMapData] = useState();
   const [localTeam, setLocalTeam] = useState();
   const [bombData, setBombData] = useState(); 
-  const [settings, setSettings] = useState(loadSettings());
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [rotationOffset, setRotationOffset] = useState(0); // Separate state for rotation
 
-  // Save settings to local storage whenever they change
-  useEffect(() => {
-    localStorage.setItem("radarSettings", JSON.stringify(settings));
-  }, [settings]);
+  // Function to handle rotation
+  const handleRotateMap = () => {
+    setRotationOffset(prev => (prev + 90) % 360);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,9 +121,30 @@ const App = () => {
         backdropFilter: `blur(7.5px)`,
       }}
     >
+      {/* Rotation Button */}
+      <button
+        onClick={handleRotateMap}
+        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
+        title={`Rotate map 90° (current: ${rotationOffset}°)`}
+      >
+        <svg 
+          width="20" 
+          height="20" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2.5" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          className="text-white"
+        >
+          <path d="M23 4v6h-6"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
 
       {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
-        <div className={`absolute left-1/2 top-2 flex-col items-center gap-1 z-50`}>
+        <div className={`absolute left-1/2 top-20 flex-col items-center gap-1 z-50`}>
           <div className={`flex justify-center items-center gap-1`}>
             <MaskedIcon
               path={`./assets/icons/c4_sml.png`}
@@ -156,53 +173,55 @@ const App = () => {
          setSettings={setSettings}
         />
 
-{ <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
-  {playerArray
-    .filter((player) => player.m_team == 2)
-    .map((player) => (
-      <PlayerCard
-        right={false}
-        key={player.m_idx}
-        playerData={player}
-      />
-    ))}
-</ul> }
+        <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
+          {playerArray
+            .filter((player) => player.m_team == 2)
+            .map((player) => (
+              <PlayerCard
+                right={false}
+                key={player.m_idx}
+                playerData={player}
+              />
+            ))}
+        </ul>
 
          {/* Zoomed radar container */}
-  <div style={{transform: 'scale(1.0)', transformOrigin: 'center'}}>
-    {(playerArray.length > 0 && mapData && (
-      <Radar
-        playerArray={playerArray}
-        radarImage={`./data/${mapData.name}/radar.png`}
-        mapData={mapData}
-        localTeam={localTeam}
-        averageLatency={averageLatency}
-        bombData={bombData}
-        settings={settings}
-      />
-    )) || (
-      <div id="radar" className={`relative overflow-hidden origin-center`}>
-        <h1 className="radar_message">
-          Connected! Waiting for data from usermode
-        </h1>
-      </div>
-    )}</div>
+        <div style={{transform: 'scale(1.0)', transformOrigin: 'center'}}>
+          {(playerArray.length > 0 && mapData && (
+            <Radar
+              playerArray={playerArray}
+              radarImage={`./data/${mapData.name}/radar.png`}
+              mapData={mapData}
+              localTeam={localTeam}
+              averageLatency={averageLatency}
+              bombData={bombData}
+              settings={settings}
+              rotationOffset={rotationOffset}
+            />
+          )) || (
+            <div id="radar" className={`relative overflow-hidden origin-center`}>
+              <h1 className="radar_message">
+                Connected! Waiting for data from usermode
+              </h1>
+            </div>
+          )}
+        </div>
 
-{ <ul
-  id="counterTerrorist"
-  className="lg:flex hidden flex-col gap-7 m-0 p-0"
->
-  {playerArray
-    .filter((player) => player.m_team == 3)
-    .map((player) => (
-      <PlayerCard
-        right={true}
-        key={player.m_idx}
-        playerData={player}
-        settings={settings}
-      />
-    ))}
-</ul> }
+        <ul
+          id="counterTerrorist"
+          className="lg:flex hidden flex-col gap-7 m-0 p-0"
+        >
+          {playerArray
+            .filter((player) => player.m_team == 3)
+            .map((player) => (
+              <PlayerCard
+                right={true}
+                key={player.m_idx}
+                playerData={player}
+                settings={settings}
+              />
+            ))}
+        </ul>
 
       </div>
     </div>

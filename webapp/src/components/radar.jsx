@@ -1,14 +1,17 @@
 import { useRef } from "react";
 import Player from "./player";
 import Bomb from "./bomb";
-const getSpawnRotation = (localTeam) => {
+
+const getSpawnRotation = (localTeam, rotationOffset = 0) => {
+  let offset = 180;
   // Rotate so CT spawn is always north (top)
   if (localTeam === 3) { // Counter-Terrorist
-    return 180; // No rotation needed
+    return offset + rotationOffset; // Add user rotation offset
   } else { // Terrorist
-    return 0; // Flip the map
+    return offset + 180 + rotationOffset; // Flip the map + user rotation offset
   }
 };
+
 const Radar = ({
   playerArray,
   radarImage,
@@ -16,15 +19,17 @@ const Radar = ({
   localTeam,
   averageLatency,
   bombData,
-  settings
+  settings,
+  rotationOffset = 0
 }) => {
   const radarImageRef = useRef();
 
   return (
     <div id="radar" className={`relative overflow-hidden origin-center`} 
-  style={{
-    transform: `rotate(${getSpawnRotation(localTeam)}deg)`
-  }}>
+      style={{
+        transform: `rotate(${getSpawnRotation(localTeam, rotationOffset)}deg)`,
+        transition: 'transform 0.3s ease-out' // Smooth rotation animation
+      }}>
       <img ref={radarImageRef} className={`w-[100vw] h-auto`} src={radarImage} />
 
       {playerArray.map((player) => (
