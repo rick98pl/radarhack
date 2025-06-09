@@ -124,7 +124,7 @@ const App = () => {
       {/* Rotation Button */}
       <button
         onClick={handleRotateMap}
-        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
+        className="absolute top-4 right-4 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
         title={`Rotate map 90° (current: ${rotationOffset}°)`}
       >
         <svg 
