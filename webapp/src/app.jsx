@@ -18,7 +18,7 @@ const PORT = 22006;
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
 
 const DEFAULT_SETTINGS = {
-  dotSize: 4,
+  dotSize: 2,
   bombSize: 4,
   showAllNames: false,
   showEnemyNames: false,

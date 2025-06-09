@@ -68,7 +68,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
   // Calculate offset based on map rotation to keep HP above dot
   const getHPOffset = () => {
     const angle = (totalMapRotation * Math.PI) / 180; // Convert to radians
-    const distance = 32; // Distance from dot center
+    const distance = 20; // Reduced distance from dot center
     return {
       x: Math.sin(angle) * distance,
       y: -Math.cos(angle) * distance
@@ -106,7 +106,7 @@ if (playerData.m_is_dead) {
             zIndex: 10
           }}
         >
-          <span className="text-xs text-white font-bold bg-black/60 px-1 py-0.5 rounded">
+          <span className="text-xs text-white font-bold bg-black/40 px-0.5 py-0.5 rounded text-[10px]">
             {safeHealth}
           </span>
         </div>
