@@ -29,8 +29,8 @@ const Bomb = ({ bombData, mapData, radarImage, localTeam, averageLatency, settin
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
         transition: `transform ${averageLatency}ms linear`,
         backgroundColor: `${
-          (bombData.m_is_defused && `#50904c`) ||
-          (localTeam == teamEnum.counterTerrorist && `#6492b4`) ||
+          (bombData.m_is_defused && `#ffffff`) ||
+          (localTeam == teamEnum.counterTerrorist && `#ffffff`) ||
           `#c90b0b`
         }`,
         WebkitMask: `url('./assets/icons/c4_sml.png') no-repeat center / contain`,
