@@ -14,7 +14,7 @@ const calculatePlayerRotation = (playerData) => {
   return playerRotations[idx];
 };
 
-const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, settings }) => {
+const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, settings, rotationOffset = 0 }) => {
   const [lastKnownPosition, setLastKnownPosition] = useState(null);
   const radarPosition = getRadarPosition(mapData, playerData.m_position) || { x: 0, y: 0 };
   const invalidPosition = radarPosition.x <= 0 && radarPosition.y <= 0;
@@ -47,6 +47,36 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
     y: radarImageBounding.height * effectivePosition.y - playerBounding.height * 0.5,
   };
 
+  // Check if this is an enemy player
+  const isEnemy = playerData.m_team !== localTeam;
+  
+  // Cap health and armor at 100
+  const safeHealth = Math.min(100, Math.max(0, playerData.m_health || 0));
+
+  // Calculate the total rotation (spawn rotation + user rotation offset)
+  const getSpawnRotation = (localTeam, rotationOffset = 0) => {
+    let offset = 180;
+    if (localTeam === 3) { // Counter-Terrorist
+      return offset + rotationOffset;
+    } else { // Terrorist
+      return offset + 180 + rotationOffset;
+    }
+  };
+
+  const totalMapRotation = getSpawnRotation(localTeam, rotationOffset);
+
+  // Calculate offset based on map rotation to keep HP above dot
+  const getHPOffset = () => {
+    const angle = (totalMapRotation * Math.PI) / 180; // Convert to radians
+    const distance = 32; // Distance from dot center
+    return {
+      x: Math.sin(angle) * distance,
+      y: -Math.cos(angle) * distance
+    };
+  };
+
+  const hpOffset = getHPOffset();
+
 if (playerData.m_is_dead) {
   return null;
 }
@@ -65,6 +95,23 @@ if (playerData.m_is_dead) {
         WebkitMask: `${(playerData.m_is_dead && `url('./assets/icons/icon-enemy-death_png.png') no-repeat center / contain`) || `none`}`,
       }}
     >
+      {/* HP number for enemy players - positioned to always appear above dot */}
+      {isEnemy && !playerData.m_is_dead && (
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${hpOffset.x}px), calc(-50% + ${hpOffset.y}px)) rotate(${-totalMapRotation}deg)`,
+            zIndex: 10
+          }}
+        >
+          <span className="text-xs text-white font-bold bg-black/60 px-1 py-0.5 rounded">
+            {safeHealth}
+          </span>
+        </div>
+      )}
+
       {/* Name above the dot - outside rotation container */}
      {/* {(settings.showAllNames && playerData.m_team === localTeam) ||
   (settings.showEnemyNames && playerData.m_team !== localTeam) ? (
@@ -99,7 +146,7 @@ if (playerData.m_is_dead) {
     
     
     <div 
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-200"
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-green-200"
       style={{
         width: `${scaledSize * 4}vw`,
         height: `${scaledSize * 4}vw`,

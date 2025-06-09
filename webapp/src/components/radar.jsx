@@ -41,6 +41,7 @@ const Radar = ({
           localTeam={localTeam}
           averageLatency={averageLatency}
           settings={settings}
+          rotationOffset={rotationOffset}
         />
       ))}
 

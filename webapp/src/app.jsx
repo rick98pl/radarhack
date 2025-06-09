@@ -18,7 +18,7 @@ const PORT = 22006;
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
 
 const DEFAULT_SETTINGS = {
-  dotSize: 6,
+  dotSize: 4,
   bombSize: 4,
   showAllNames: false,
   showEnemyNames: false,
@@ -124,7 +124,7 @@ const App = () => {
       {/* Rotation Button */}
       <button
         onClick={handleRotateMap}
-        className="absolute top-4 right-4 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
+        className="absolute bottom-4 left-4 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
         title={`Rotate map 90° (current: ${rotationOffset}°)`}
       >
         <svg 
@@ -143,47 +143,34 @@ const App = () => {
         </svg>
       </button>
 
+      {/* Bomb Timer in Top-Left Corner */}
       {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
-        <div className={`absolute left-1/2 top-20 flex-col items-center gap-1 z-50`}>
-          <div className={`flex justify-center items-center gap-1`}>
-            <MaskedIcon
-              path={`./assets/icons/c4_sml.png`}
-              height={32}
-              color={
-                (bombData.m_is_defusing &&
-                  bombData.m_blow_time - bombData.m_defuse_time > 0 &&
-                  `bg-radar-green`) ||
-                (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
-                  `bg-radar-red`) ||
-                `bg-radar-secondary`
-              }
-            />
-            <span>{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
-                `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
-              ""
-              }`}</span>
-          </div>
+        <div className={`absolute left-4 top-4 flex items-center gap-1 z-50`}>
+          <MaskedIcon
+            path={`./assets/icons/c4_sml.png`}
+            height={32}
+            color={
+              (bombData.m_is_defusing &&
+                bombData.m_blow_time - bombData.m_defuse_time > 0 &&
+                `bg-radar-green`) ||
+              (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
+                `bg-radar-red`) ||
+              `bg-radar-secondary`
+            }
+          />
+          <span className="text-white font-semibold">{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
+              `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
+            ""
+            }`}</span>
         </div>
       )}
 
-      <div className={`flex items-center justify-center`}>
+      <div className={`flex items-center justify-center px-[15px] min-h-screen`}>
         <Latency
          value={averageLatency}
          settings={settings}
          setSettings={setSettings}
         />
-
-        <ul id="terrorist" className="lg:flex hidden flex-col gap-7 m-0 p-0">
-          {playerArray
-            .filter((player) => player.m_team == 2)
-            .map((player) => (
-              <PlayerCard
-                right={false}
-                key={player.m_idx}
-                playerData={player}
-              />
-            ))}
-        </ul>
 
          {/* Zoomed radar container */}
         <div style={{transform: 'scale(1.0)', transformOrigin: 'center'}}>
@@ -207,18 +194,16 @@ const App = () => {
           )}
         </div>
 
-        <ul
-          id="counterTerrorist"
-          className="lg:flex hidden flex-col gap-7 m-0 p-0"
-        >
+        {/* Enemy team on right side */}
+        <ul className="flex flex-col gap-2 m-0 p-0 ml-8">
           {playerArray
-            .filter((player) => player.m_team == 3)
+            .filter((player) => player.m_team !== localTeam)
             .map((player) => (
               <PlayerCard
                 right={true}
                 key={player.m_idx}
                 playerData={player}
-                settings={settings}
+                localTeam={localTeam}
               />
             ))}
         </ul>

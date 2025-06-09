@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import MaskedIcon from "./maskedicon";
 import { playerColors, teamEnum } from "../utilities/utilities";
 
-const PlayerCard = ({ playerData, isOnRightSide }) => {
+const PlayerCard = ({ playerData, isOnRightSide, localTeam }) => {
   const [modelName, setModelName] = useState(playerData.m_model_name);
 
   useEffect(() => {
@@ -10,178 +10,99 @@ const PlayerCard = ({ playerData, isOnRightSide }) => {
       setModelName(playerData.m_model_name);
   }, [playerData.m_model_name]);
 
+  // Determine if this player is on the local team
+  const isLocalTeam = playerData.m_team === localTeam;
+  
+  // Set border and background colors based on team
+  const teamColorClasses = isLocalTeam 
+    ? 'border-green-400/50 bg-green-500/10' 
+    : 'border-red-400/50 bg-red-500/10';
+
+  // Ensure health and armor are never negative and cap at 100
+  const safeHealth = Math.min(100, Math.max(0, playerData.m_health || 0));
+  const safeArmor = Math.min(100, Math.max(0, playerData.m_armor || 0));
+
   return (
     <li
       style={{ opacity: `${(playerData.m_is_dead && `0.5`) || `1`}` }}
-      className={`flex ${isOnRightSide && `flex-row-reverse`}`}
+      className={`flex flex-col p-1.5 py-3 rounded-md border ${teamColorClasses} transition-all duration-200 w-28 h-24`}
     >
-      <div
-        className={`flex flex-col gap-[0.375rem] justify-center items-center`}
-      >
-        {/* <div
-  className={`hover:cursor-pointer`}
-  onClick={() =>
-    window.open(
-      `https://steamcommunity.com/profiles/${playerData.m_steam_id}`,
-      "_blank",
-      "noopener,noreferrer"
-    )
-  }
->
-  {playerData.m_name}
-</div> */}
-        {/* <div
-  className={`w-0 h-0 border-solid border-t-[12px] border-r-[8px] border-b-[12px] border-l-[8px]`}
-  style={{
-    borderColor: `${
-      playerColors[playerData.m_color]
-    } transparent transparent transparent`,
-  }}
-></div> */}
-        {/* <img
-  className={`h-[8rem] ${isOnRightSide && `scale-x-[-1]`}`}
-  src={`./assets/characters/${modelName}.png`}
-></img> */}
+      {/* Player nickname at top */}
+      <div className="flex items-center justify-center mb-1">
+        <div className={`text-xs font-medium ${isLocalTeam ? 'text-green-300' : 'text-red-300'} text-center leading-tight truncate w-full`}>
+          {playerData.m_name}
+        </div>
       </div>
 
-      <div
-        className={`flex flex-col ${
-          isOnRightSide && `flex-row-reverse`
-        } justify-center gap-2`}
-      >
-        <span
-          className={`${isOnRightSide && `flex justify-end`} text-radar-green`}
-        >
+      {/* Money */}
+      <div className="flex justify-center mb-1">
+        <span className={`text-radar-green font-semibold text-xs`}>
           ${playerData.m_money}
         </span>
+      </div>
 
-        <div className={`flex ${isOnRightSide && `flex-row-reverse`} gap-2`}>
-          <div className="flex gap-[4px] items-center">
-            <MaskedIcon
-              path={`./assets/icons/health.svg`}
-              height={16}
-              color={`bg-radar-secondary`}
-            />
-            <span className="text-radar-primary">{playerData.m_health}</span>
-          </div>
-
-          <div className="flex gap-[4px] items-center">
-            <MaskedIcon
-              path={`./assets/icons/${
-                (playerData.m_has_helmet && `kevlar_helmet`) || `kevlar`
-              }.svg`}
-              height={16}
-              color={`bg-radar-secondary`}
-            />
-            <span className="text-radar-primary">{playerData.m_armor}</span>
-          </div>
+      {/* Health and Armor row */}
+      <div className="flex justify-center gap-2 items-center mb-1">
+        <div className="flex gap-0.5 items-center">
+          <MaskedIcon
+            path={`./assets/icons/health.svg`}
+            height={8}
+            color={`${isLocalTeam ? 'bg-green-400' : 'bg-red-400'}`}
+          />
+          <span className={`${isLocalTeam ? 'text-green-300' : 'text-red-300'} font-medium text-xs`}>
+            {safeHealth}
+          </span>
         </div>
 
-        <div className={`flex ${isOnRightSide && `flex-row-reverse`} gap-3`}>
-          {playerData.m_weapons && playerData.m_weapons.m_primary && (
-            <MaskedIcon
-              path={`./assets/icons/${playerData.m_weapons.m_primary}.svg`}
-              height={28}
-              color={`${
-                (playerData.m_weapons.m_active ==
-                  playerData.m_weapons.m_primary &&
-                  `bg-radar-primary`) ||
-                `bg-radar-secondary`
-              }`}
-            />
-          )}
+        <div className="flex gap-0.5 items-center">
+          <MaskedIcon
+            path={`./assets/icons/${
+              (playerData.m_has_helmet && `kevlar_helmet`) || `kevlar`
+            }.svg`}
+            height={8}
+            color={`${isLocalTeam ? 'bg-green-400' : 'bg-red-400'}`}
+          />
+          <span className={`${isLocalTeam ? 'text-green-300' : 'text-red-300'} font-medium text-xs`}>
+            {safeArmor}
+          </span>
+        </div>
+      </div>
 
-          {playerData.m_weapons && playerData.m_weapons.m_secondary && (
-            <MaskedIcon
-              path={`./assets/icons/${playerData.m_weapons.m_secondary}.svg`}
-              height={28}
-              color={`${
-                (playerData.m_weapons.m_active ==
-                  playerData.m_weapons.m_secondary &&
-                  `bg-radar-primary`) ||
-                `bg-radar-secondary`
-              }`}
-            />
-          )}
+      {/* Weapons row */}
+      <div className="flex justify-center gap-1 items-center">
+        {playerData.m_weapons && playerData.m_weapons.m_primary && (
+          <MaskedIcon
+            path={`./assets/icons/${playerData.m_weapons.m_primary}.svg`}
+            height={12}
+            color={`${isLocalTeam ? 'bg-green-500' : 'bg-red-500'}`}
+          />
+        )}
 
-          {playerData.m_weapons &&
-            playerData.m_weapons.m_melee &&
-            playerData.m_weapons.m_melee.map((melee) => (
+        {playerData.m_weapons && playerData.m_weapons.m_secondary && (
+          <MaskedIcon
+            path={`./assets/icons/${playerData.m_weapons.m_secondary}.svg`}
+            height={12}
+            color={`${isLocalTeam ? 'bg-green-500' : 'bg-red-500'}`}
+          />
+        )}
+
+        {/* Special items only */}
+        {(playerData.m_team == teamEnum.counterTerrorist &&
+          playerData.m_has_defuser && (
+            <MaskedIcon
+              path={`./assets/icons/defuser.svg`}
+              height={10}
+              color={`${isLocalTeam ? 'bg-green-400' : 'bg-red-400'}`}
+            />
+          )) ||
+          (playerData.m_team == teamEnum.terrorist &&
+            playerData.m_has_bomb && (
               <MaskedIcon
-                key={melee}
-                path={`./assets/icons/${melee}.svg`}
-                height={28}
-                color={`${
-                  (playerData.m_weapons.m_active == melee &&
-                    `bg-radar-primary`) ||
-                  `bg-radar-secondary`
-                }`}
+                path={`./assets/icons/c4.svg`}
+                height={10}
+                color={`${isLocalTeam ? 'bg-green-500' : 'bg-red-500'}`}
               />
             ))}
-        </div>
-
-        <div className={`flex flex-col relative`}>
-          <div
-            className={`flex ${
-              isOnRightSide && `flex-row-reverse`
-            } gap-9 mt-3 items-center`}
-          >
-            {playerData.m_weapons &&
-              playerData.m_weapons.m_utilities &&
-              playerData.m_weapons.m_utilities.map((utility) => (
-                <MaskedIcon
-                  key={utility}
-                  path={`./assets/icons/${utility}.svg`}
-                  height={28}
-                  color={`${
-                    (playerData.m_weapons.m_active == utility &&
-                      `bg-radar-primary`) ||
-                    `bg-radar-secondary`
-                  }`}
-                />
-              ))}
-
-            {[
-              ...Array(
-                Math.max(
-                  4 -
-                    ((playerData.m_weapons &&
-                      playerData.m_weapons.m_utilities &&
-                      playerData.m_weapons.m_utilities.length) ||
-                      0),
-                  0
-                )
-              ),
-            ].map((_, i) => (
-              <div
-                key={i}
-                className="rounded-full w-[6px] h-[6px] bg-radar-primary"
-              ></div>
-            ))}
-
-            {(playerData.m_team == teamEnum.counterTerrorist &&
-              playerData.m_has_defuser && (
-                <MaskedIcon
-                  path={`./assets/icons/defuser.svg`}
-                  height={28}
-                  color={`bg-radar-secondary`}
-                />
-              )) ||
-              (playerData.m_team == teamEnum.terrorist &&
-                playerData.m_has_bomb && (
-                  <MaskedIcon
-                    path={`./assets/icons/c4.svg`}
-                    height={28}
-                    color={
-                      ((playerData.m_weapons &&
-                        playerData.m_weapons.m_active) == `c4` &&
-                        `bg-radar-primary`) ||
-                      `bg-radar-secondary`
-                    }
-                  />
-                ))}
-          </div>
-        </div>
       </div>
     </li>
   );
