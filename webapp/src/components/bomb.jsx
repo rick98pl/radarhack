@@ -28,11 +28,14 @@ const Bomb = ({ bombData, mapData, radarImage, localTeam, averageLatency, settin
         height: `${scaledSize}vw`,
         transform: `translate(${radarImageTranslation.x}px, ${radarImageTranslation.y}px)`,
         transition: `transform ${averageLatency}ms linear`,
-        backgroundColor: `${
-          (bombData.m_is_defused && `#ffffff`) ||
-          (localTeam == teamEnum.counterTerrorist && `#ffffff`) ||
-          `#c90b0b`
-        }`,
+       backgroundColor: `${
+  (bombData.m_is_defused && `#50904c`) ||                    // Green when defused
+  (bombData.m_is_planted && `#ff6600`) ||                    // Orange when planted
+  (bombData.m_is_dropped && `#ffff00`) ||                    // Yellow when dropped/on ground
+  (!bombData.m_is_carried && `#ffff00`) ||                   // Yellow when not being carried
+  (localTeam == teamEnum.counterTerrorist && `#6492b4`) ||   // Blue for CT team
+  `#c90b0b`                                                   // Red default
+}`,
         WebkitMask: `url('./assets/icons/c4_sml.png') no-repeat center / contain`,
         opacity: `1`,
         zIndex: `1`,
