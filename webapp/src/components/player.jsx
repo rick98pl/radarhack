@@ -172,7 +172,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         {settings.showViewCones && !playerData.m_is_dead && (
           <div
             className={`absolute left-1/2 top-1/2 ${
-              playerData.m_name?.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-20 bg-green-300' : 'w-[4vw] h-[8vw] opacity-40 bg-white'
+              playerData.m_name?.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-70 bg-green-300' : 'w-[4vw] h-[8vw] opacity-40 bg-white'
             }`}
             style={{
               transform: `translate(-50%, 5%) rotate(0deg)`,
