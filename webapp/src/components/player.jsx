@@ -123,20 +123,20 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         </div>
       )}
 
-      {/* Weapon icon for enemy players - positioned next to HP */}
+      {/* Weapon icon for enemy players - positioned above HP */}
       {isEnemy && !playerData.m_is_dead && weaponToDisplay && (
         <div 
           className="absolute pointer-events-none flex items-center justify-center"
           style={{
             left: '50%',
             top: '50%',
-            transform: `translate(calc(-50% + ${hpOffset.x + 35}px), calc(-50% + ${hpOffset.y}px)) rotate(${-totalMapRotation}deg)`,
+            transform: `translate(calc(-50% + ${hpOffset.x}px), calc(-50% + ${hpOffset.y - 25}px)) rotate(${-totalMapRotation}deg)`,
             zIndex: 15,
             width: '32px',
             height: '28px'
           }}
         >
-          <div className="bg-black/50 rounded px-1 py-1 flex items-center justify-center min-w-[28px] min-h-[24px]">
+          <div className="bg-black/20 rounded px-1 py-1 flex items-center justify-center min-w-[28px] min-h-[24px]">
             <MaskedIcon
               path={`./assets/icons/${weaponToDisplay}.svg`}
               height={24}
@@ -172,7 +172,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         {settings.showViewCones && !playerData.m_is_dead && (
           <div
             className={`absolute left-1/2 top-1/2 ${
-              playerData.m_name?.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-15 bg-green-300' : 'w-[4vw] h-[8vw] opacity-30 bg-white'
+              playerData.m_name?.includes('MUTED') ? 'w-[6vw] h-[12vw] opacity-20 bg-green-300' : 'w-[4vw] h-[8vw] opacity-40 bg-white'
             }`}
             style={{
               transform: `translate(-50%, 5%) rotate(0deg)`,
