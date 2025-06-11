@@ -2,7 +2,7 @@
 
 namespace f::players
 {
-	bool get_data(int32_t idx, c_cs_player_controller* player, c_cs_player_pawn* player_pawn);
+	bool get_data(int32_t idx, c_cs_player_controller* player, c_cs_player_pawn* player_pawn, bool is_local_player = false);
 	void get_weapons(c_cs_player_pawn* player_pawn);
 	void get_active_weapon(c_cs_player_pawn* player_pawn);
 }

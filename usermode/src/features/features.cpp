@@ -60,7 +60,10 @@ void f::get_player_info()
 			if (!player_pawn)
 				continue;
 
-			if (!f::players::get_data(idx, player, player_pawn))
+			// Check if this is the local player
+			const bool is_local_player = (player == sdk::m_local_controller);
+
+			if (!f::players::get_data(idx, player, player_pawn, is_local_player))
 				continue;
 
 			f::players::get_weapons(player_pawn);

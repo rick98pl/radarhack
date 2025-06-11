@@ -1,6 +1,6 @@
 #include "pch.hpp"
 
-bool f::players::get_data(int32_t idx, c_cs_player_controller* player, c_cs_player_pawn* player_pawn)
+bool f::players::get_data(int32_t idx, c_cs_player_controller* player, c_cs_player_pawn* player_pawn, bool is_local_player)
 {
 	const auto health = player_pawn->m_iHealth();
 	const auto is_dead = health <= 0;
@@ -13,6 +13,7 @@ bool f::players::get_data(int32_t idx, c_cs_player_controller* player, c_cs_play
 	m_player_data["m_team"] = team;
 	m_player_data["m_health"] = health;
 	m_player_data["m_is_dead"] = is_dead;
+	m_player_data["m_is_local_player"] = is_local_player;
 	m_player_data["m_model_name"] = player_pawn->get_model_name();
 	m_player_data["m_steam_id"] = std::to_string(player->m_steamID());
 	m_player_data["m_money"] = player->m_pInGameMoneyServices()->m_iAccount();
@@ -62,26 +63,26 @@ void f::players::get_weapons(c_cs_player_pawn* player_pawn)
 		const auto weapon_type = weapon_data->m_WeaponType();
 		switch (weapon_type)
 		{
-			case e_weapon_type::submachinegun:
-			case e_weapon_type::rifle:
-			case e_weapon_type::shotgun:
-			case e_weapon_type::sniper_rifle:
-			case e_weapon_type::machinegun:
-				m_player_data["m_weapons"]["m_primary"] = weapon_name;
-				break;
+		case e_weapon_type::submachinegun:
+		case e_weapon_type::rifle:
+		case e_weapon_type::shotgun:
+		case e_weapon_type::sniper_rifle:
+		case e_weapon_type::machinegun:
+			m_player_data["m_weapons"]["m_primary"] = weapon_name;
+			break;
 
-			case e_weapon_type::pistol:
-				m_player_data["m_weapons"]["m_secondary"] = weapon_name;
-				break;
+		case e_weapon_type::pistol:
+			m_player_data["m_weapons"]["m_secondary"] = weapon_name;
+			break;
 
-			case e_weapon_type::knife:
-			case e_weapon_type::taser:
-				melee_set.insert(weapon_name);
-				break;
+		case e_weapon_type::knife:
+		case e_weapon_type::taser:
+			melee_set.insert(weapon_name);
+			break;
 
-			case e_weapon_type::grenade:
-				utilities_set.insert(weapon_name);
-				break;
+		case e_weapon_type::grenade:
+			utilities_set.insert(weapon_name);
+			break;
 		}
 	}
 
