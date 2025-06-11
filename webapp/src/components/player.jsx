@@ -39,6 +39,9 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
 
   const isEnemy = playerData.m_team !== localTeam;
   const safeHealth = Math.min(100, Math.max(0, playerData.m_health || 0));
+  
+  // Get Z coordinate (height) and round it
+  const zCoordinate = Math.round(Math.round(playerData.m_position?.z + 600|| 0)/10);
 
   const getWeaponToDisplay = () => {
     if (playerData.m_weapons?.m_primary) return playerData.m_weapons.m_primary;
@@ -64,7 +67,17 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
     };
   };
 
+  const getZOffset = () => {
+    const angle = (totalMapRotation * Math.PI) / 180;
+    const distance = 35; // Slightly further than HP
+    return {
+      x: Math.sin(angle) * distance,
+      y: -Math.cos(angle) * distance
+    };
+  };
+
   const hpOffset = getHPOffset();
+  const zOffset = getZOffset();
 
   if (playerData.m_is_dead) return null;
 
@@ -81,6 +94,24 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         WebkitMask: `${(playerData.m_is_dead && `url('./assets/icons/icon-enemy-death_png.png') no-repeat center / contain`) || `none`}`,
       }}
     >
+      {/* Z Coordinate display for enemies */}
+      {isEnemy && !playerData.m_is_dead && (
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${zOffset.x}px), calc(-50% + ${zOffset.y}px)) rotate(${-totalMapRotation}deg)`,
+            zIndex: 12
+          }}
+        >
+          <span className="text-xs text-cyan-300 font-bold bg-black/50 px-1 py-0.5 rounded text-[10px]">
+            {zCoordinate}
+          </span>
+        </div>
+      )}
+
+      {/* HP display for enemies */}
       {isEnemy && !playerData.m_is_dead && (
         <div 
           className="absolute pointer-events-none"
@@ -97,6 +128,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
         </div>
       )}
 
+      {/* Weapon display for enemies */}
       {isEnemy && !playerData.m_is_dead && weaponToDisplay && (
         <div 
           className="absolute pointer-events-none flex items-center justify-center"
@@ -116,6 +148,23 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
               color="bg-yellow-400"
             />
           </div>
+        </div>
+      )}
+
+      {/* Z Coordinate display for local player */}
+      {playerData.m_is_local_player && !playerData.m_is_dead && (
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${zOffset.x}px), calc(-50% + ${zOffset.y}px)) rotate(${-totalMapRotation}deg)`,
+            zIndex: 20
+          }}
+        >
+          <span className="text-xs text-green-300 font-bold bg-black/50 px-1 py-0.5 rounded text-[10px]">
+            {zCoordinate}
+          </span>
         </div>
       )}
 
