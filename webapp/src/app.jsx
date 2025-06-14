@@ -18,11 +18,11 @@ const PORT = 22006;
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
 
 const DEFAULT_SETTINGS = {
-  dotSize: 2.5,    // Increased from 1 to 2.5 for better visibility
-  bombSize: 3.0,   // Increased from 0.5 to 3.0 for better bomb visibility
+  dotSize: 3,
+  bombSize: 4,
   showAllNames: false,
-  showEnemyNames: true,  // Changed to true to match your second code
-  showViewCones: false,  // Changed to false to match your second code
+  showEnemyNames: false,
+  showViewCones: true,
 };
 
 const App = () => {
@@ -30,7 +30,7 @@ const App = () => {
   const [playerArray, setPlayerArray] = useState([]);
   const [mapData, setMapData] = useState();
   const [localTeam, setLocalTeam] = useState();
-  const [bombData, setBombData] = useState(); // Add bomb data state
+  const [bombData, setBombData] = useState();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [rotationOffset, setRotationOffset] = useState(0);
   const [showPlayerCards, setShowPlayerCards] = useState(false);
@@ -60,6 +60,36 @@ const App = () => {
     
     return rotation;
   };
+
+  // Send bomb status to Electron main process
+  useEffect(() => {
+    if (!bombData) return;
+
+    // Process bomb data for Electron
+    const bombStatus = {
+      isPlanted: bombData.m_blow_time > 0 && !bombData.m_is_defused,
+      isDefused: bombData.m_is_defused,
+      isDefusing: bombData.m_is_defusing,
+      blowTime: bombData.m_blow_time,
+      defuseTime: bombData.m_defuse_time,
+      canDefuse: bombData.m_is_defusing && (bombData.m_blow_time - bombData.m_defuse_time > 0),
+      defusingPlayer: bombData.m_is_defusing ? {
+        name: "Player" // You might need to get the actual defuser's name from playerArray
+      } : null
+    };
+
+    // Send to parent window (Electron)
+    if (window.parent !== window) {
+      const bombMessage = {
+        type: 'BOMB_STATUS',
+        bombStatus: bombStatus,
+        timestamp: Date.now()
+      };
+      
+      console.log('[REACT] 💣 Sending bomb status to Electron:', bombStatus);
+      window.parent.postMessage(bombMessage, '*');
+    }
+  }, [bombData, playerArray]);
 
   // Send player angle to Electron
   useEffect(() => {
@@ -190,7 +220,7 @@ const App = () => {
         const parsedData = JSON.parse(await event.data.text());
         setPlayerArray(parsedData.m_players);
         setLocalTeam(parsedData.m_local_team);
-        setBombData(parsedData.m_bomb); // Add bomb data parsing
+        setBombData(parsedData.m_bomb);
 
         const map = parsedData.m_map;
         if (map !== "invalid") {
@@ -212,29 +242,7 @@ const App = () => {
 
   return (
     <div className="w-screen h-screen flex relative overflow-hidden">
-      {/* Bomb Timer UI - copied from second code */}
-      {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
-        <div className={`absolute left-1/2 top-2 flex-col items-center gap-1 z-50`}>
-          <div className={`flex justify-center items-center gap-1`}>
-            <MaskedIcon
-              path={`./assets/icons/c4_sml.png`}
-              height={32}
-              color={
-                (bombData.m_is_defusing &&
-                  bombData.m_blow_time - bombData.m_defuse_time > 0 &&
-                  `bg-radar-green`) ||
-                (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
-                  `bg-radar-red`) ||
-                `bg-radar-secondary`
-              }
-            />
-            <span className="text-white">{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
-                `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
-              ""
-              }`}</span>
-          </div>
-        </div>
-      )}
+      {/* REMOVED: Bomb Timer UI - now handled by Electron main.js */}
 
       {/* Main Radar Canvas */}
       <div
@@ -347,7 +355,7 @@ const App = () => {
                 mapData={mapData}
                 localTeam={localTeam}
                 averageLatency={averageLatency}
-                bombData={bombData} // Add bomb data prop
+                bombData={bombData}
                 settings={settings}
                 rotationOffset={rotationOffset}
                 localPlayerViewAngle={getLocalPlayerViewAngle()}
