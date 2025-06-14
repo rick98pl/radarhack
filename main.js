@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+// Simple development check without external dependency
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 // Keep a global reference of the window object
 let mainWindow;
@@ -26,8 +28,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false,
-      devTools: false,
-      preload: path.join(__dirname, 'preload.js')
+      devTools: isDev, // Only enable devTools in development
+      preload: path.join(__dirname, 'preload.js') // This should work for both dev and build
     },
     icon: path.join(__dirname, 'assets/icon.png'),
     show: false
@@ -38,6 +40,9 @@ function createWindow() {
   
   // Additional method to ensure it stays on top
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  // Define iframe source based on environment
+  const iframeSrc = isDev ? 'http://localhost:5173' : 'data:text/html,<h1>App Content</h1>';
 
   // Create HTML wrapper with circular iframe
   const htmlContent = `
@@ -136,9 +141,9 @@ function createWindow() {
         }
         
         .author-text .author-name {
-  color: #1e40af; /* Darker blue color for r0gal */
-  font-weight: 500;
-}
+          color: #1e40af; /* Darker blue color for r0gal */
+          font-weight: 500;
+        }
         
         .iframe-container {
           width: 100vw;
@@ -182,28 +187,42 @@ function createWindow() {
         </div>
       </div>
       
-      <!-- Author text removed from bottom -->
-      
       <div class="iframe-container" id="iframeContainer">
-        <iframe src="http://localhost:5173" frameborder="0" id="mainIframe"></iframe>
+        <iframe src="${iframeSrc}" frameborder="0" id="mainIframe"></iframe>
       </div>
       
       <script>
         let currentRotation = 0;
-        const iframe = document.getElementById('mainIframe'); // Changed from container to iframe
+        const iframe = document.getElementById('mainIframe');
+        const IS_DEV = ${isDev}; // Pass isDev as a JavaScript boolean
         
         // Window control functions
         function refreshApp() {
-          document.getElementById('mainIframe').src = 'http://localhost:5173';
+          const iframeSrc = IS_DEV ? 'http://localhost:5173' : 'data:text/html,<h1>App Content</h1>';
+          document.getElementById('mainIframe').src = iframeSrc;
         }
         
         function closeApp() {
-          window.electronAPI?.closeApp();
+          console.log('Close button clicked');
+          
+          // Check if electronAPI is available
+          if (window.electronAPI && window.electronAPI.closeApp) {
+            console.log('Calling electronAPI.closeApp()');
+            window.electronAPI.closeApp().catch(err => {
+              console.error('Error calling closeApp:', err);
+              // Fallback: try to close window directly
+              window.close();
+            });
+          } else {
+            console.error('electronAPI not available');
+            // Fallback: try to close window directly
+            window.close();
+          }
         }
         
         // Listen for messages from the iframe (React app)
         window.addEventListener('message', (event) => {
-          if (event.origin !== 'http://localhost:5173') return;
+          if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
           
           // Handle rotation angle updates with smart path calculation
           if (event.data.type === 'ROTATION_ANGLE') {
@@ -232,6 +251,10 @@ function createWindow() {
             return;
           }
         });
+        
+        // Debug: Log when page loads
+        console.log('HTML wrapper loaded, electronAPI available:', !!window.electronAPI);
+        console.log('Development mode:', IS_DEV);
       </script>
     </body>
     </html>
@@ -288,8 +311,8 @@ function createWindow() {
       return;
     }
     
-    // Allow localhost navigation
-    if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+    // Allow localhost navigation only in dev mode
+    if (isDev && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')) {
       return;
     }
     
@@ -300,8 +323,8 @@ function createWindow() {
 
   // Handle new window requests
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Allow React dev server error overlays and localhost windows
-    if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    // Allow React dev server error overlays and localhost windows only in dev
+    if (isDev && (url.includes('localhost') || url.includes('127.0.0.1'))) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
@@ -336,6 +359,7 @@ app.whenReady().then(() => {
 
 // IPC handler for close button
 ipcMain.handle('close-app', () => {
+  console.log('IPC close-app handler called');
   if (mainWindow) {
     mainWindow.close();
   }
