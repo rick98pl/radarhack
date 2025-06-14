@@ -85,6 +85,7 @@ function createWindow() {
           align-items: center;
           padding-left: 8px;
           flex: 1;
+          gap: 4px;
         }
         
         .title-bar-center {
@@ -102,7 +103,7 @@ function createWindow() {
           justify-content: flex-end;
         }
         
-        .refresh-btn, .close-btn {
+        .refresh-btn, .rotate-btn, .close-btn {
           width: 24px;
           height: 24px;
           border: none;
@@ -118,12 +119,16 @@ function createWindow() {
           -webkit-app-region: no-drag;
         }
         
-        .refresh-btn:hover {
+        .refresh-btn:hover, .rotate-btn:hover {
           background: rgba(255, 255, 255, 0.2);
         }
         
         .close-btn:hover {
           background: rgba(255, 0, 0, 0.7);
+        }
+        
+        .rotate-btn {
+          font-size: 14px;
         }
         
         .version-text {
@@ -177,6 +182,7 @@ function createWindow() {
       <div class="title-bar">
         <div class="title-bar-left">
           <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
+          <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
         </div>
         <div class="title-bar-center">
           <span class="author-text"><span class="author-name">radarhack</span></span>
@@ -193,6 +199,7 @@ function createWindow() {
       
       <script>
         let currentRotation = 0;
+        let fixedRotationOffset = 0; // Track manual rotation offset
         const iframe = document.getElementById('mainIframe');
         const IS_DEV = ${isDev}; // Pass isDev as a JavaScript boolean
         
@@ -218,6 +225,18 @@ function createWindow() {
             // Fallback: try to close window directly
             window.close();
           }
+        }
+        
+        // New function to rotate radar by 90 degrees
+        function rotateRadar() {
+          fixedRotationOffset += 90;
+          updateRotation();
+        }
+        
+        // Update rotation with both dynamic and fixed offset
+        function updateRotation() {
+          const totalRotation = currentRotation + fixedRotationOffset;
+          iframe.style.transform = \`rotate(\${totalRotation}deg)\`;
         }
         
         // Listen for messages from the iframe (React app)
@@ -246,8 +265,8 @@ function createWindow() {
             
             // Apply rotation to iframe only, not container
             const newRotation = currentRotation + diff;
-            iframe.style.transform = \`rotate(\${newRotation}deg)\`;
             currentRotation = newRotation;
+            updateRotation(); // Use the new update function
             return;
           }
         });
