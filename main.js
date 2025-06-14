@@ -197,7 +197,7 @@ function createWindow() {
           <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
         </div>
         <div class="title-bar-center">
-          <span class="author-text"><span class="author-name">radarhack</span></span>
+          <span class="author-text"><span class="author-name"></span></span>
         </div>
         <div class="title-bar-right">
           <span class="version-text">v1.0.0</span>
