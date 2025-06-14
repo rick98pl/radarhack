@@ -19,7 +19,7 @@ const Player = ({ playerData, mapData, radarImage, localTeam, averageLatency, se
   const playerBounding = (playerRef.current && playerRef.current.getBoundingClientRect()) || { width: 0, height: 0 };
   const playerRotation = calculatePlayerRotation(playerData);
   const radarImageBounding = (radarImage !== undefined && radarImage.getBoundingClientRect()) || { width: 0, height: 0 };
-  const scaledSize = 0.7 * settings.dotSize;
+  const scaledSize = 1.2 * settings.dotSize;
 
   useEffect(() => {
     if (playerData.m_is_dead) {

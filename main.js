@@ -9,13 +9,13 @@ let mainWindow;
 function createWindow() {
   // Create the browser window - optimized size for radar
   mainWindow = new BrowserWindow({
-    width: 515,  // Smaller, optimized size
-    height: 515, // Square window for circular radar
+    width: 615,  // Smaller, optimized size
+    height: 615, // Square window for circular radar
     minWidth: 400,  // Minimum size
     minHeight: 400, // Minimum size
     maxWidth: 1200, // Maximum size
     maxHeight: 1200, // Maximum size
-    x: 1400,
+    x: 1300,
     y: 500,
     alwaysOnTop: true,
     frame: false, // Remove default frame
@@ -64,21 +64,22 @@ function createWindow() {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* Custom title bar controls */
-       .title-bar {
+        /* Custom title bar controls - MOVED 50px HIGHER */
+.title-bar {
   position: fixed;
-  top: 0;
-  right: 0; /* Changed from left: 0 to right: 0 */
-  width: 100px; /* Set fixed width to 100px */
-  height: 32px;
+  top: 50px; /* CHANGED: Moved from 100px to 50px (50px higher) */
+  right: 0;
+  width: 130px; /* Kept at 130px as specified */
+  height: 30px; /* Changed from calculated height to fixed 30px */
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(10px);
   display: flex;
-  justify-content: flex-end; /* Align content to the right */
-  align-items: center;
+  justify-content: flex-end;
+  align-items: center; /* Changed from flex-start to center for vertical centering */
   z-index: 1000;
   -webkit-app-region: drag;
-  padding-right: 8px; /* Add some padding from the right edge */
+  padding-right: 8px;
+  padding-top: 0; /* Removed top padding since we're centering */
   box-sizing: border-box;
 }
 
@@ -98,7 +99,7 @@ function createWindow() {
   flex: none; /* Don't flex, use natural width */
 }
         
-        .refresh-btn, .rotate-btn, .close-btn {
+        .refresh-btn, .rotate-btn, .bomb-toggle-btn, .close-btn {
   width: 24px;
   height: 24px;
   border: none;
@@ -114,8 +115,12 @@ function createWindow() {
   -webkit-app-region: no-drag;
 }
 
-.refresh-btn:hover, .rotate-btn:hover {
+.refresh-btn:hover, .rotate-btn:hover, .bomb-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.bomb-toggle-btn.active {
+  background: rgba(255, 193, 7, 0.6);
 }
 
 .close-btn:hover {
@@ -150,21 +155,22 @@ function createWindow() {
           height: 100vh;
           display: flex;
           justify-content: center;
-          align-items: flex-start; /* Align to top instead of center */
-          padding: 10px;
-          padding-top: 37px; /* 32px title bar + 5px gap */
+          align-items: center;
+          padding: 20px;
           box-sizing: border-box;
+          position: relative;
+          /* CHANGED: Move radar 150px to the right */
+          transform: translateX(100px);
         }
         
        iframe {
-  /* Perfect circle - fixed size based on window dimensions */
-  width: min(calc(100vw - 20px), calc(100vh - 57px));
-  height: min(calc(100vw - 20px), calc(100vh - 57px));
-  border: 2px solid #8b5cf6; /* Purple border */
+  /* Perfect circle - centered in viewport */
+  width: min(calc(100vw - 200px), calc(100vh - 200px));
+  height: min(calc(100vw - 200px), calc(100vh - 200px));
+  border: 2px solid #8b5cf6;
   background: white;
   border-radius: 50%;
   
-  /* Small shadow around the circle */
   box-shadow: 
     0 2px 8px rgba(0, 0, 0, 0.3),
     0 1px 4px rgba(0, 0, 0, 0.2);
@@ -172,25 +178,126 @@ function createWindow() {
   transform-origin: center center;
   transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
   
-  /* Better anti-aliasing */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   
-  /* Force better edge rendering */
   outline: none;
   -webkit-font-smoothing: antialiased;
 }
+
+        /* Bomb status display - completely separate from iframe */
+        .bomb-status {
+          position: fixed;
+          top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 30px); /* Position below iframe circle */
+          left: calc(50% + 100px); /* CHANGED: Offset bomb status to follow radar position */
+          transform: translateX(-50%);
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          padding: 12px 20px;
+          display: none;
+          align-items: center;
+          gap: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: white;
+          z-index: 999;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+          min-width: 200px;
+          justify-content: center;
+        }
+
+        .bomb-status.visible {
+          display: flex;
+        }
+
+        .bomb-status.force-visible {
+          display: flex !important;
+        }
+
+        .bomb-icon {
+          font-size: 20px;
+        }
+
+        .bomb-timer {
+          font-size: 18px;
+          font-weight: bold;
+        }
+
+        .defuse-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding-left: 12px;
+          border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .defuse-status {
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .defuse-status.can-defuse {
+          color: #4ade80;
+        }
+
+        .defuse-status.too-late {
+          color: #f87171;
+        }
+
+        .defuse-player {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .defuse-timer {
+          font-weight: bold;
+        }
+
+        .status-indicator {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+        }
+
+        .status-indicator.planted {
+          background: #f97316;
+        }
+
+        .status-indicator.defusing-safe {
+          background: #4ade80;
+        }
+
+        .status-indicator.defusing-danger {
+          background: #f87171;
+        }
+
+        .status-indicator.not-planted {
+          background: #6b7280;
+        }
+
+        .status-indicator.not-defusing {
+          background: #f97316;
+        }
+
+        .bomb-message {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          font-weight: 500;
+        }
       </style>
     </head>
     <body>
       <!-- Custom title bar -->
-      <!-- Custom title bar - 100px width, right-aligned -->
+      <!-- Custom title bar - 130px width, right-aligned -->
 <div class="title-bar">
   <div class="title-bar-right">
     <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
     <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
+    <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
     <span class="version-text">v1.0.0</span>
     <button class="close-btn" onclick="closeApp()" title="Close">×</button>
   </div>
@@ -200,11 +307,30 @@ function createWindow() {
         <iframe src="${iframeSrc}" frameborder="0" id="mainIframe"></iframe>
       </div>
       
+      <!-- Bomb status display -->
+      <div class="bomb-status" id="bombStatus">
+        <span class="bomb-icon">💣</span>
+        <span class="bomb-message">Not Planted</span>
+        <div class="status-indicator not-planted"></div>
+      </div>
+      
       <script>
         let currentRotation = 0;
         let fixedRotationOffset = 0; // Track manual rotation offset
+        let bombDisplayVisible = true; // Track bomb display toggle state (ON by default)
+        let currentBombData = null; // Store current bomb data
         const iframe = document.getElementById('mainIframe');
         const IS_DEV = ${isDev}; // Pass isDev as a JavaScript boolean
+        
+        // Bomb status elements
+        const bombStatus = document.getElementById('bombStatus');
+        const bombTimer = document.getElementById('bombTimer');
+        const defuseInfo = document.getElementById('defuseInfo');
+        const defuseStatus = document.getElementById('defuseStatus');
+        const defusePlayer = document.getElementById('defusePlayer');
+        const defuseTimer = document.getElementById('defuseTimer');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const bombToggleBtn = document.querySelector('.bomb-toggle-btn');
         
         // Window control functions
         function refreshApp() {
@@ -230,7 +356,35 @@ function createWindow() {
           }
         }
         
-        // New function to rotate radar by 90 degrees
+        // Function to toggle bomb display visibility
+        function toggleBombDisplay() {
+          bombDisplayVisible = !bombDisplayVisible;
+          
+          if (bombDisplayVisible) {
+            bombToggleBtn.classList.add('active');
+            bombStatus.classList.add('force-visible');
+            // Update display with current bomb data or show default message
+            if (currentBombData) {
+              updateBombDisplay(currentBombData);
+            } else {
+              showDefaultBombStatus();
+            }
+          } else {
+            bombToggleBtn.classList.remove('active');
+            bombStatus.classList.remove('force-visible');
+            bombStatus.classList.remove('visible');
+          }
+        }
+        
+        // Function to show default bomb status when no data is available
+        function showDefaultBombStatus() {
+          bombStatus.classList.add('force-visible');
+          bombStatus.innerHTML = \`
+            <span class="bomb-icon">💣</span>
+            <span class="bomb-message">Not Planted</span>
+            <div class="status-indicator not-planted"></div>
+          \`;
+        }
         function rotateRadar() {
           fixedRotationOffset += 90;
           updateRotation();
@@ -242,9 +396,84 @@ function createWindow() {
           iframe.style.transform = \`rotate(\${totalRotation}deg)\`;
         }
         
+        // Function to update bomb status display
+        function updateBombDisplay(bombData) {
+          currentBombData = bombData; // Store current bomb data
+          
+          // If bomb display is force hidden, don't show anything
+          if (!bombDisplayVisible) {
+            if (!bombData || !bombData.isPlanted || bombData.isDefused) {
+              bombStatus.classList.remove('visible');
+            } else {
+              bombStatus.classList.add('visible');
+            }
+            return;
+          }
+          
+          // Force show when toggle is active
+          bombStatus.classList.add('force-visible');
+          
+          // Handle different bomb states
+          if (!bombData || !bombData.isPlanted) {
+            // Not planted
+            bombStatus.innerHTML = \`
+              <span class="bomb-icon">💣</span>
+              <span class="bomb-message">Not Planted</span>
+              <div class="status-indicator not-planted"></div>
+            \`;
+            return;
+          }
+          
+          if (bombData.isDefused) {
+            // Defused
+            bombStatus.innerHTML = \`
+              <span class="bomb-icon">✅</span>
+              <span class="bomb-message">Bomb Defused</span>
+              <div class="status-indicator defusing-safe"></div>
+            \`;
+            return;
+          }
+          
+          // Bomb is planted and active
+          if (bombData.isDefusing) {
+            // Someone is defusing
+            const canDefuse = bombData.canDefuse;
+            const playerName = bombData.defusingPlayer ? bombData.defusingPlayer.name : 'Unknown';
+            
+            bombStatus.innerHTML = \`
+              <span class="bomb-icon">💣</span>
+              <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
+              <div class="defuse-info">
+                <span style="font-size: 16px;">🔧</span>
+                <div>
+                  <div class="defuse-status \${canDefuse ? 'can-defuse' : 'too-late'}">\${canDefuse ? 'CAN DEFUSE' : 'TOO LATE!'}</div>
+                  <div class="defuse-player">\${playerName}</div>
+                </div>
+                <span class="defuse-timer">\${bombData.defuseTime.toFixed(1)}s</span>
+              </div>
+              <div class="status-indicator \${canDefuse ? 'defusing-safe' : 'defusing-danger'}"></div>
+            \`;
+          } else {
+            // Planted but not being defused
+            bombStatus.innerHTML = \`
+              <span class="bomb-icon">💣</span>
+              <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
+              <span class="bomb-message">Not Defused</span>
+              <div class="status-indicator not-defusing"></div>
+            \`;
+          }
+        }
+        
         // Listen for messages from the iframe (React app)
         window.addEventListener('message', (event) => {
           if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
+          
+          // Handle bomb status updates
+          if (event.data.type === 'BOMB_STATUS') {
+            console.log('[ELECTRON] 💣 Received bomb status:', event.data.bombStatus);
+            updateBombDisplay(event.data.bombStatus);
+            return;
+          }
           
           // Handle rotation angle updates with smart path calculation
           if (event.data.type === 'ROTATION_ANGLE') {
@@ -274,7 +503,13 @@ function createWindow() {
           }
         });
         
-        // Debug: Log when page loads
+        // Initialize bomb display on page load
+        window.addEventListener('load', () => {
+          if (bombDisplayVisible) {
+            bombToggleBtn.classList.add('active');
+            showDefaultBombStatus();
+          }
+        });
         console.log('HTML wrapper loaded, electronAPI available:', !!window.electronAPI);
         console.log('Development mode:', IS_DEV);
       </script>

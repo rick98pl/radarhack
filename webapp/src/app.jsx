@@ -18,11 +18,11 @@ const PORT = 22006;
 const EFFECTIVE_IP = USE_LOCALHOST ? "localhost" : PUBLIC_IP.match(/[a-zA-Z]/) ? window.location.hostname : PUBLIC_IP;
 
 const DEFAULT_SETTINGS = {
-  dotSize: 3,
-  bombSize: 2,
+  dotSize: 2.5,    // Increased from 1 to 2.5 for better visibility
+  bombSize: 3.0,   // Increased from 0.5 to 3.0 for better bomb visibility
   showAllNames: false,
-  showEnemyNames: false,
-  showViewCones: true,
+  showEnemyNames: true,  // Changed to true to match your second code
+  showViewCones: false,  // Changed to false to match your second code
 };
 
 const App = () => {
@@ -30,12 +30,12 @@ const App = () => {
   const [playerArray, setPlayerArray] = useState([]);
   const [mapData, setMapData] = useState();
   const [localTeam, setLocalTeam] = useState();
-  const [bombData, setBombData] = useState(); 
+  const [bombData, setBombData] = useState(); // Add bomb data state
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [rotationOffset, setRotationOffset] = useState(0);
   const [showPlayerCards, setShowPlayerCards] = useState(false);
   const [isElectronRotating, setIsElectronRotating] = useState(true);
-  const [lastSentAngle, setLastSentAngle] = useState(0); // Track last sent angle to avoid spam
+  const [lastSentAngle, setLastSentAngle] = useState(0);
   
   // UI Controls visibility flag - set to false to hide all control buttons
   const [showUIControls, setShowUIControls] = useState(false);
@@ -47,28 +47,16 @@ const App = () => {
   };
 
   // Convert CS2 view angle to rotation angle for the iframe
-  // We want the player cone to always point north (top), so we rotate the map in the opposite direction
   const convertViewAngleToRotation = (viewAngle) => {
-    // Ensure viewAngle is a valid number
     if (typeof viewAngle !== 'number' || isNaN(viewAngle)) {
       viewAngle = 0;
     }
     
-    // To keep the player cone pointing north, we need to rotate the map in the OPPOSITE direction
-    // If player looks at 90°, we rotate the map by -90° so the cone appears to point north
-    let rotation = -viewAngle; // Negative to reverse direction
-    
-    // Normalize to 0-360 range (handle negative values)
+    let rotation = -viewAngle;
     rotation = ((rotation % 360) + 360) % 360;
-    
-    // Ensure we have a clean positive number
     rotation = Math.abs(rotation);
-    
-    // Final safety check - ensure it's in 0-360 range
     rotation = rotation % 360;
-    
-    // Round to avoid floating point precision issues
-    rotation = Math.round(rotation * 10) / 10; // Round to 1 decimal place
+    rotation = Math.round(rotation * 10) / 10;
     
     return rotation;
   };
@@ -77,15 +65,15 @@ const App = () => {
   useEffect(() => {
     if (!isElectronRotating || playerArray.length === 0) return;
 
+    const localPlayer = playerArray.find(player => player.m_is_local_player);
     const localPlayerAngle = (localPlayer && localPlayer.m_health > 0) ? localPlayer.m_eye_angle : 0;
 
     const rotationAngle = convertViewAngleToRotation(localPlayerAngle);
     
-    // Only send if angle has changed significantly (avoid spam)
     const angleDifference = Math.abs(rotationAngle - lastSentAngle);
     const normalizedDifference = Math.min(angleDifference, 360 - angleDifference);
     
-    if (normalizedDifference > 1) { // Only update if change is > 1 degree
+    if (normalizedDifference > 1) {
       console.log('[REACT] 🎯 Local player angle:', localPlayerAngle, '° -> Rotation:', rotationAngle, '°');
       
       if (window.parent !== window) {
@@ -103,18 +91,15 @@ const App = () => {
     }
   }, [playerArray, isElectronRotating, lastSentAngle]);
 
-  // Function to handle rotation
   const handleRotateMap = () => {
     setRotationOffset(prev => (prev + 90) % 360);
   };
 
-  // Function to toggle Electron rotation
   const toggleElectronRotation = () => {
     const newState = !isElectronRotating;
     setIsElectronRotating(newState);
     
     if (!newState) {
-      // Reset to 0 when stopping
       if (window.parent !== window) {
         window.parent.postMessage({
           type: 'ROTATION_ANGLE',
@@ -125,10 +110,8 @@ const App = () => {
       }
       setLastSentAngle(0);
     } else {
-      // Start with current player angle
       const localPlayerAngle = getLocalPlayerViewAngle();
       
-      // Validate the angle before processing
       if (typeof localPlayerAngle === 'number' && !isNaN(localPlayerAngle)) {
         const rotationAngle = convertViewAngleToRotation(localPlayerAngle);
         
@@ -145,21 +128,9 @@ const App = () => {
     }
   };
 
-  // Function to toggle player cards visibility
   const togglePlayerCards = () => {
     setShowPlayerCards(prev => !prev);
   };
-
-  // Example: Auto-trigger rotation based on game events (optional)
-  useEffect(() => {
-    // Optional: Start rotation when bomb is planted
-    if (bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused) {
-      if (!isElectronRotating) {
-        setIsElectronRotating(true);
-      }
-    }
-    // Note: Removed auto-stop to let user control rotation manually
-  }, [bombData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -219,7 +190,7 @@ const App = () => {
         const parsedData = JSON.parse(await event.data.text());
         setPlayerArray(parsedData.m_players);
         setLocalTeam(parsedData.m_local_team);
-        setBombData(parsedData.m_bomb);
+        setBombData(parsedData.m_bomb); // Add bomb data parsing
 
         const map = parsedData.m_map;
         if (map !== "invalid") {
@@ -235,26 +206,49 @@ const App = () => {
     fetchData();
   }, []);
 
-  // Get current local player info for display
   const localPlayer = playerArray.find(player => player.m_is_local_player);
   const currentPlayerAngle = localPlayer ? localPlayer.m_eye_angle : 0;
   const currentRotationAngle = convertViewAngleToRotation(currentPlayerAngle);
 
   return (
     <div className="w-screen h-screen flex relative overflow-hidden">
+      {/* Bomb Timer UI - copied from second code */}
+      {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
+        <div className={`absolute left-1/2 top-2 flex-col items-center gap-1 z-50`}>
+          <div className={`flex justify-center items-center gap-1`}>
+            <MaskedIcon
+              path={`./assets/icons/c4_sml.png`}
+              height={32}
+              color={
+                (bombData.m_is_defusing &&
+                  bombData.m_blow_time - bombData.m_defuse_time > 0 &&
+                  `bg-radar-green`) ||
+                (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
+                  `bg-radar-red`) ||
+                `bg-radar-secondary`
+              }
+            />
+            <span className="text-white">{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
+                `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
+              ""
+              }`}</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Radar Canvas */}
       <div
         className={`flex-1 flex flex-col justify-center backdrop-blur-[7.5px] overflow-hidden transition-all duration-300 ${
           showPlayerCards ? 'mr-64' : 'mr-0'
         }`}
         style={{
-background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48, 0.95) 16%, rgba(12, 20, 42, 0.95) 32%, rgba(9, 16, 36, 0.95) 48%, rgba(6, 12, 28, 0.95) 64%, rgba(4, 8, 22, 0.95) 80%, rgba(2, 5, 18, 0.95) 100%)`,          backdropFilter: `blur(7.5px)`,
+          background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48, 0.95) 16%, rgba(12, 20, 42, 0.95) 32%, rgba(9, 16, 36, 0.95) 48%, rgba(6, 12, 28, 0.95) 64%, rgba(4, 8, 22, 0.95) 80%, rgba(2, 5, 18, 0.95) 100%)`,
+          backdropFilter: `blur(7.5px)`,
         }}
       >
-        {/* UI Controls - Only show if showUIControls is true */}
+        {/* UI Controls */}
         {showUIControls && (
           <>
-            {/* Rotation Button */}
             <button
               onClick={handleRotateMap}
               className="absolute bottom-4 left-4 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
@@ -276,7 +270,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
               </svg>
             </button>
 
-            {/* Electron Player Angle Rotation Toggle Button */}
             <button
               onClick={toggleElectronRotation}
               className={`absolute bottom-16 left-4 z-50 rounded-full p-3 transition-all duration-200 border shadow-lg ${
@@ -305,7 +298,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
               </svg>
             </button>
 
-            {/* Player Cards Toggle Button */}
             <button
               onClick={togglePlayerCards}
               className="absolute bottom-4 right-4 z-50 bg-black/40 hover:bg-black/60 rounded-full p-3 transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg"
@@ -323,7 +315,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
                 className="text-white"
               >
                 {showPlayerCards ? (
-                  // Eye slash icon (hide)
                   <>
                     <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
                     <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
@@ -331,7 +322,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
                     <line x1="2" y1="2" x2="22" y2="22"/>
                   </>
                 ) : (
-                  // Eye icon (show)
                   <>
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
@@ -342,28 +332,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
           </>
         )}
 
-        {/* Bomb Timer in Top-Left Corner */}
-        {bombData && bombData.m_blow_time > 0 && !bombData.m_is_defused && (
-          <div className={`absolute left-4 top-4 flex items-center gap-1 z-50`}>
-            <MaskedIcon
-              path={`./assets/icons/c4_sml.png`}
-              height={32}
-              color={
-                (bombData.m_is_defusing &&
-                  bombData.m_blow_time - bombData.m_defuse_time > 0 &&
-                  `bg-radar-green`) ||
-                (bombData.m_blow_time - bombData.m_defuse_time < 0 &&
-                  `bg-radar-red`) ||
-                `bg-radar-secondary`
-              }
-            />
-            <span className="text-white font-semibold">{`${bombData.m_blow_time.toFixed(1)}s ${(bombData.m_is_defusing &&
-                `(${bombData.m_defuse_time.toFixed(1)}s)`) ||
-              ""
-              }`}</span>
-          </div>
-        )}
-
         <div className={`flex items-center justify-center px-[15px] min-h-screen`}>
           <Latency
            value={averageLatency}
@@ -371,7 +339,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
            setSettings={setSettings}
           />
 
-           {/* Zoomed radar container */}
           <div style={{transform: 'scale(1.0)', transformOrigin: 'center'}}>
             {(playerArray.length > 0 && mapData && (
               <Radar
@@ -380,7 +347,7 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
                 mapData={mapData}
                 localTeam={localTeam}
                 averageLatency={averageLatency}
-                bombData={bombData}
+                bombData={bombData} // Add bomb data prop
                 settings={settings}
                 rotationOffset={rotationOffset}
                 localPlayerViewAngle={getLocalPlayerViewAngle()}
@@ -396,7 +363,7 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
         </div>
       </div>
 
-      {/* Player Cards Canvas - Separate sliding panel */}
+      {/* Player Cards Panel */}
       <div 
         className={`fixed right-0 top-0 h-full w-64 transition-transform duration-300 ease-in-out z-40 ${
           showPlayerCards ? 'translate-x-0' : 'translate-x-full'
@@ -408,7 +375,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
           boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.3)'
         }}
       >
-        {/* Panel Header */}
         <div className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">Players</h2>
@@ -434,9 +400,7 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
           </div>
         </div>
 
-        {/* Player Cards Container */}
         <div className="p-4 h-full overflow-y-auto">
-          {/* Allied Team Section */}
           {playerArray.filter((player) => player.m_team === localTeam).length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-medium text-green-300 mb-3 uppercase tracking-wide">
@@ -458,7 +422,6 @@ background: `linear-gradient(135deg, rgba(18, 30, 55, 0.95) 0%, rgba(15, 25, 48,
             </div>
           )}
 
-          {/* Enemy Team Section */}
           {playerArray.filter((player) => player.m_team !== localTeam).length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-red-300 mb-3 uppercase tracking-wide">

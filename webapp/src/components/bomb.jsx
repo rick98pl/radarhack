@@ -16,7 +16,7 @@ const Bomb = ({ bombData, mapData, radarImage, localTeam, averageLatency, settin
   };
 
   // Calculate bomb size based on settings
-  const baseSize = 1.5; // Base size in vw
+  const baseSize = 2; // Base size in vw
   const scaledSize = baseSize * settings.bombSize;
 
   return (
