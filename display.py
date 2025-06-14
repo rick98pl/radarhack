@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
-X, Y = 1950, 400  # Initial window position
+X, Y = 1400, 400  # Initial window position
 INIT_WIDTH, INIT_HEIGHT = 600, 535
 TOOLBAR_HEIGHT = 35
 

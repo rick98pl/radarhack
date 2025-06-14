@@ -1,0 +1,42 @@
+{
+  "name": "CS2 RADARHACK UI BY R0GAL",
+  "version": "1.0.0",
+  "description": "Simple Electron browser for localhost:5173",
+  "main": "browser.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": [
+    "electron",
+    "browser",
+    "localhost"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.yourname.localhost-browser",
+    "productName": "Localhost Browser",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "browser.js",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
