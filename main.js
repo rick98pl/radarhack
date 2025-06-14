@@ -161,20 +161,32 @@ function createWindow() {
           box-sizing: border-box;
         }
         
-        iframe {
-          /* Perfect circle - fixed size based on window dimensions */
-          width: min(calc(100vw - 20px), calc(100vh - 57px)); /* Choose smaller dimension, account for all padding */
-          height: min(calc(100vw - 20px), calc(100vh - 57px));
-          border: none;
-          background: white;
-          border-radius: 50%; /* Makes it circular */
-          box-shadow: 
-            0 0 30px rgba(0, 0, 0, 0.4),
-            0 0 60px rgba(0, 0, 0, 0.2),
-            inset 0 0 0 2px rgba(255, 255, 255, 0.1); /* Subtle inner border */
-          transform-origin: center center;
-          transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
-        }
+       iframe {
+  /* Perfect circle - fixed size based on window dimensions */
+  width: min(calc(100vw - 20px), calc(100vh - 57px));
+  height: min(calc(100vw - 20px), calc(100vh - 57px));
+  border: 2px solid #8b5cf6; /* Purple border */
+  background: white;
+  border-radius: 50%;
+  
+  /* Small shadow around the circle */
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 1px 4px rgba(0, 0, 0, 0.2);
+    
+  transform-origin: center center;
+  transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  
+  /* Better anti-aliasing */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  
+  /* Force better edge rendering */
+  outline: none;
+  -webkit-font-smoothing: antialiased;
+}
       </style>
     </head>
     <body>
