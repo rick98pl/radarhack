@@ -65,78 +65,73 @@ function createWindow() {
         }
         
         /* Custom title bar controls */
-        .title-bar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 32px;
-          background: rgba(0, 0, 0, 0.65);
-          backdrop-filter: blur(10px);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          z-index: 1000;
-          -webkit-app-region: drag;
-        }
-        
-        .title-bar-left {
-          display: flex;
-          align-items: center;
-          padding-left: 8px;
-          flex: 1;
-          gap: 4px;
-        }
-        
-        .title-bar-center {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex: 1;
-        }
-        
-        .title-bar-right {
-          display: flex;
-          align-items: center;
-          padding-right: 8px;
-          flex: 1;
-          justify-content: flex-end;
-        }
+       .title-bar {
+  position: fixed;
+  top: 0;
+  right: 0; /* Changed from left: 0 to right: 0 */
+  width: 100px; /* Set fixed width to 100px */
+  height: 32px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: flex-end; /* Align content to the right */
+  align-items: center;
+  z-index: 1000;
+  -webkit-app-region: drag;
+  padding-right: 8px; /* Add some padding from the right edge */
+  box-sizing: border-box;
+}
+
+/* Remove the left and center sections since we only want right-aligned controls */
+.title-bar-left {
+  display: none; /* Hide the left section with refresh and rotate buttons */
+}
+
+.title-bar-center {
+  display: none; /* Hide the center section with author text */
+}
+
+.title-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px; /* Add gap between elements */
+  flex: none; /* Don't flex, use natural width */
+}
         
         .refresh-btn, .rotate-btn, .close-btn {
-          width: 24px;
-          height: 24px;
-          border: none;
-          border-radius: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-          transition: background 0.2s;
-          -webkit-app-region: no-drag;
-        }
-        
-        .refresh-btn:hover, .rotate-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .close-btn:hover {
-          background: rgba(255, 0, 0, 0.7);
-        }
-        
-        .rotate-btn {
-          font-size: 14px;
-        }
-        
-        .version-text {
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 11px;
-          font-weight: 500;
-          margin-right: 8px;
-        }
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background 0.2s;
+  -webkit-app-region: no-drag;
+}
+
+.refresh-btn:hover, .rotate-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.close-btn:hover {
+  background: rgba(255, 0, 0, 0.7);
+}
+
+.rotate-btn {
+  font-size: 14px;
+}
+
+.version-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 500;
+  margin-right: 4px; /* Reduced margin */
+}
         
         .author-text {
           color: rgba(255, 255, 255, 0.8);
@@ -191,19 +186,15 @@ function createWindow() {
     </head>
     <body>
       <!-- Custom title bar -->
-      <div class="title-bar">
-        <div class="title-bar-left">
-          <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
-          <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
-        </div>
-        <div class="title-bar-center">
-          <span class="author-text"><span class="author-name"></span></span>
-        </div>
-        <div class="title-bar-right">
-          <span class="version-text">v1.0.0</span>
-          <button class="close-btn" onclick="closeApp()" title="Close">×</button>
-        </div>
-      </div>
+      <!-- Custom title bar - 100px width, right-aligned -->
+<div class="title-bar">
+  <div class="title-bar-right">
+    <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
+    <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
+    <span class="version-text">v1.0.0</span>
+    <button class="close-btn" onclick="closeApp()" title="Close">×</button>
+  </div>
+</div>
       
       <div class="iframe-container" id="iframeContainer">
         <iframe src="${iframeSrc}" frameborder="0" id="mainIframe"></iframe>
