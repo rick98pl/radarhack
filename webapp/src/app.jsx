@@ -77,7 +77,8 @@ const App = () => {
   useEffect(() => {
     if (!isElectronRotating || playerArray.length === 0) return;
 
-    const localPlayerAngle = getLocalPlayerViewAngle();
+    const localPlayerAngle = (localPlayer && localPlayer.m_health > 0) ? localPlayer.m_eye_angle : 0;
+
     const rotationAngle = convertViewAngleToRotation(localPlayerAngle);
     
     // Only send if angle has changed significantly (avoid spam)
