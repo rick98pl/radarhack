@@ -91,31 +91,32 @@ function createWindow() {
           pointer-events: all !important;
         }
         .refresh-btn, .rotate-btn, .bomb-toggle-btn, .resize-btn-toolbar, .close-btn {
-          width: 24px;
-          height: 24px;
-          border: none;
-          border-radius: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-          transition: background 0.2s;
+          width: 24px !important;
+          height: 24px !important;
+          border: none !important;
+          border-radius: 4px !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 12px !important;
+          transition: background 0.2s !important;
           -webkit-app-region: no-drag !important;
           pointer-events: all !important;
-          position: relative;
-          z-index: 9999;
-          user-select: none;
-          -webkit-user-select: none;
-          outline: none;
-          border: 1px solid transparent;
-          overflow: visible;
-          touch-action: manipulation;
+          position: relative !important;
+          z-index: 99999 !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          outline: none !important;
+          border: 1px solid transparent !important;
+          overflow: visible !important;
+          touch-action: manipulation !important;
         }
         .refresh-btn *, .rotate-btn *, .bomb-toggle-btn *, .resize-btn-toolbar *, .close-btn * {
           pointer-events: none !important;
+          -webkit-app-region: no-drag !important;
         }
         .refresh-btn {
           background: rgba(59, 130, 246, 0.7) !important;
@@ -206,13 +207,13 @@ function createWindow() {
           transform: translateZ(0);
           outline: none;
           -webkit-font-smoothing: antialiased;
-          -webkit-app-region: drag;
+          -webkit-app-region: no-drag;
           pointer-events: auto;
-          cursor: move;
+          cursor: default;
           z-index: 1;
         }
         iframe:hover {
-          cursor: move;
+          cursor: default;
         }
         .resize-btn {
           position: fixed;
@@ -272,8 +273,9 @@ function createWindow() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
           min-width: 200px;
           justify-content: center;
-          -webkit-app-region: no-drag !important;
+          -webkit-app-region: drag;
           pointer-events: auto;
+          cursor: move;
         }
         .bomb-status.visible {
           display: flex;
@@ -519,22 +521,33 @@ function createWindow() {
         document.addEventListener('DOMContentLoaded', () => {
           const toolbar = document.querySelector('.title-bar');
           const allToolbarElements = toolbar.querySelectorAll('*');
-          [toolbar, ...allToolbarElements].forEach(element => {
-            element.style.webkitAppRegion = 'no-drag';
-            element.style.pointerEvents = 'auto';
-          });
+          function enforceNoDrag() {
+            [toolbar, ...allToolbarElements].forEach(element => {
+              element.style.webkitAppRegion = 'no-drag';
+              element.style.pointerEvents = 'all';
+            });
+            const buttons = document.querySelectorAll('.title-bar button, .resize-btn');
+            buttons.forEach(button => {
+              button.style.webkitAppRegion = 'no-drag';
+              button.style.pointerEvents = 'all';
+              button.style.zIndex = '9999';
+              button.style.position = 'relative';
+              const children = button.querySelectorAll('*');
+              children.forEach(child => {
+                child.style.pointerEvents = 'none';
+              });
+            });
+          }
+          enforceNoDrag();
+          setInterval(enforceNoDrag, 100);
+          window.addEventListener('focus', enforceNoDrag);
+          window.addEventListener('blur', enforceNoDrag);
+          document.addEventListener('visibilitychange', enforceNoDrag);
           const buttons = document.querySelectorAll('.title-bar button, .resize-btn');
           buttons.forEach(button => {
-            button.style.webkitAppRegion = 'no-drag';
-            button.style.pointerEvents = 'all';
-            button.style.zIndex = '9999';
-            button.style.position = 'relative';
-            const children = button.querySelectorAll('*');
-            children.forEach(child => {
-              child.style.pointerEvents = 'none';
-            });
             button.addEventListener('mousedown', (e) => {
               e.stopPropagation();
+              enforceNoDrag();
             });
             button.addEventListener('dragstart', (e) => {
               e.preventDefault();
