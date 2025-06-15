@@ -88,7 +88,7 @@ function createWindow() {
           position: fixed;
           top: 50px;
           right: 100px;
-          width: 210px;
+          width: 198px;
           height: 30px;
           background: rgba(0, 0, 0, 0.65);
           backdrop-filter: blur(10px);
@@ -97,7 +97,7 @@ function createWindow() {
           align-items: center;
           z-index: 1003;
           -webkit-app-region: no-drag !important;
-          padding-right: 8px;
+          padding-right: 3px;
           box-sizing: border-box;
           pointer-events: all !important;
         }
