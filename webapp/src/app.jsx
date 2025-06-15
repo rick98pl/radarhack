@@ -340,7 +340,7 @@ const App = () => {
           </>
         )}
 
-        <div className={`flex items-center justify-center px-[15px] min-h-screen`}>
+        <div className={`flex items-center justify-center px-[50px] min-h-screen`}>
           <Latency
            value={averageLatency}
            settings={settings}

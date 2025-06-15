@@ -221,7 +221,7 @@ function createWindow() {
           height: var(--radar-size);
           border: 2px solid #f59e0b;
           background: white;
-          border-radius: 50%;
+          border-radius: 70%;
           box-shadow: 
             0 2px 8px rgba(0, 0, 0, 0.3),
             0 1px 4px rgba(0, 0, 0, 0.2);
