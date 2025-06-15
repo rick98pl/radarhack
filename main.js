@@ -1,4 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+// Hide drag hint after a few seconds
+        setTimeout(() => {
+          const dragHint = document.querySelector('.drag-hint');
+          if (dragHint) {
+            dragHint.style.opacity = '0';
+            setTimeout(() => {
+              dragHint.style.display = 'none';
+            }, 300);
+          }
+        }, 3000);const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 // Simple development check without external dependency
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -7,6 +16,36 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow;
 
 function createWindow() {
+  // Get the primary display's work area size
+  const primaryDisplay = screen.getPrimaryDisplay();
+  
+  // Debug: Log all display information
+  console.log('=== DISPLAY DEBUG INFO ===');
+  console.log('Primary Display Object:', primaryDisplay);
+  console.log('Work Area Size:', primaryDisplay.workAreaSize);
+  console.log('Screen Size:', primaryDisplay.size);
+  console.log('Scale Factor:', primaryDisplay.scaleFactor);
+  console.log('Bounds:', primaryDisplay.bounds);
+  console.log('Work Area:', primaryDisplay.workArea);
+  console.log('========================');
+  
+  const { width: displayWidth, height: displayHeight } = primaryDisplay.workAreaSize;
+  
+  // Calculate center position for both x and y
+  const windowWidth = 615;
+  const windowHeight = 615;
+  const xPosition = Math.floor((displayWidth - windowWidth) / 2);
+  const yPosition = Math.floor((displayHeight - windowHeight) / 2);
+  
+  // Debug: Log calculated values
+  console.log('Display Width:', displayWidth);
+  console.log('Display Height:', displayHeight);
+  console.log('Window Width:', windowWidth);
+  console.log('Window Height:', windowHeight);
+  console.log('Calculated X Position (centered):', xPosition);
+  console.log('Calculated Y Position (centered):', yPosition);
+  console.log('Window will be centered at:', xPosition, yPosition);
+  
   // Create the browser window - optimized size for radar
   mainWindow = new BrowserWindow({
     width: 615,  // Smaller, optimized size
@@ -15,13 +54,13 @@ function createWindow() {
     minHeight: 400, // Minimum size
     maxWidth: 1200, // Maximum size
     maxHeight: 1200, // Maximum size
-    x: 1300,
-    y: 500,
+    x: xPosition,  // Dynamic x position - centered on screen
+    y: yPosition,  // Dynamic y position - centered on screen
     alwaysOnTop: true,
     frame: false, // Remove default frame
     transparent: true, // Enable transparency
     opacity: 0.88, // Set 80% opacity
-    resizable: true, // Allow resizing
+    resizable: false, // CHANGED: Disable resizing - only use +/- buttons
     skipTaskbar: false, // Keep in taskbar but always on top
     focusable: true, // Allow focusing
     webPreferences: {
@@ -62,44 +101,39 @@ function createWindow() {
           height: 100vh;
           position: relative;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          /* NO DRAGGING AT ALL by default */
+          -webkit-app-region: no-drag;
         }
         
-        /* Custom title bar controls - MOVED 50px HIGHER */
+        /* Custom title bar controls - MADE LONGER (230px) */
 .title-bar {
   position: fixed;
-  top: 50px; /* CHANGED: Moved from 100px to 50px (50px higher) */
+  top: 50px;
   right: 0;
-  width: 130px; /* Kept at 130px as specified */
-  height: 30px; /* Changed from calculated height to fixed 30px */
+  width: 210px; /* DECREASED: From 230px to 210px (-20px) */
+  height: 30px;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(10px);
   display: flex;
   justify-content: flex-end;
-  align-items: center; /* Changed from flex-start to center for vertical centering */
+  align-items: center;
   z-index: 1000;
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag; /* CRITICAL: Make entire toolbar non-draggable */
   padding-right: 8px;
-  padding-top: 0; /* Removed top padding since we're centering */
   box-sizing: border-box;
 }
 
-/* Remove the left and center sections since we only want right-aligned controls */
-.title-bar-left {
-  display: none; /* Hide the left section with refresh and rotate buttons */
-}
-
-.title-bar-center {
-  display: none; /* Hide the center section with author text */
-}
+/* REMOVED: drag region before element - no part of toolbar should be draggable */
 
 .title-bar-right {
   display: flex;
   align-items: center;
-  gap: 4px; /* Add gap between elements */
-  flex: none; /* Don't flex, use natural width */
+  gap: 4px;
+  flex: none;
+  -webkit-app-region: no-drag; /* Ensure button container is not draggable */
 }
         
-        .refresh-btn, .rotate-btn, .bomb-toggle-btn, .close-btn {
+        .refresh-btn, .rotate-btn, .bomb-toggle-btn, .resize-btn-toolbar, .close-btn {
   width: 24px;
   height: 24px;
   border: none;
@@ -112,10 +146,25 @@ function createWindow() {
   justify-content: center;
   font-size: 12px;
   transition: background 0.2s;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: no-drag; /* Explicitly no-drag for buttons */
+  pointer-events: auto; /* Ensure buttons are clickable */
+  position: relative;
+  z-index: 1001;
+  /* Ensure buttons are above everything else */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.refresh-btn:hover, .rotate-btn:hover, .bomb-toggle-btn:hover {
+/* SPECIAL STYLING: Make refresh button green background */
+.refresh-btn {
+  background: rgba(34, 197, 94, 0.7); /* Green background for refresh button */
+}
+
+.refresh-btn:hover {
+  background: rgba(34, 197, 94, 0.9); /* Darker green on hover */
+}
+
+.rotate-btn:hover, .bomb-toggle-btn:hover, .resize-btn-toolbar:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -131,11 +180,20 @@ function createWindow() {
   font-size: 14px;
 }
 
+.resize-btn-toolbar {
+  font-size: 16px;
+  font-weight: bold;
+}
+
 .version-text {
   color: rgba(255, 255, 255, 0.8);
   font-size: 11px;
   font-weight: 500;
-  margin-right: 4px; /* Reduced margin */
+  margin-right: 4px;
+  -webkit-app-region: no-drag;
+  pointer-events: none;
+  position: relative;
+  z-index: 1001;
 }
         
         .author-text {
@@ -161,6 +219,8 @@ function createWindow() {
           position: relative;
           /* CHANGED: Move radar 150px to the right */
           transform: translateX(100px);
+          /* NO DRAGGING by default */
+          -webkit-app-region: no-drag;
         }
         
        iframe {
@@ -185,6 +245,61 @@ function createWindow() {
   
   outline: none;
   -webkit-font-smoothing: antialiased;
+  
+  /* CHANGED: Make iframe draggable to move the entire window */
+  -webkit-app-region: drag;
+  pointer-events: auto;
+  cursor: move;
+}
+
+/* Override iframe dragging when hovering over interactive elements inside */
+iframe:hover {
+  cursor: move;
+}
+
+/* Resize buttons - positioned under radar */
+.resize-btn {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  transition: all 0.2s;
+  -webkit-app-region: no-drag;
+  z-index: 1001;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.resize-btn:hover {
+  background: rgba(139, 92, 246, 0.8);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.resize-btn:active {
+  transform: scale(0.95);
+}
+
+.resize-btn-minus {
+  /* Position under radar on the left */
+  top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 20px);
+  left: calc(50% + 100px - min(calc(100vw - 200px), calc(100vh - 200px))/2 - 50px);
+}
+
+.resize-btn-plus {
+  /* Position under radar on the right */
+  top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 20px);
+  right: calc(50% - 100px - min(calc(100vw - 200px), calc(100vh - 200px))/2 + 50px);
 }
 
         /* Bomb status display - completely separate from iframe */
@@ -208,6 +323,8 @@ function createWindow() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
           min-width: 200px;
           justify-content: center;
+          /* NO DRAGGING */
+          -webkit-app-region: no-drag;
         }
 
         .bomb-status.visible {
@@ -288,17 +405,20 @@ function createWindow() {
           font-size: 14px;
           font-weight: 500;
         }
+
+
       </style>
     </head>
     <body>
-      <!-- Custom title bar -->
-      <!-- Custom title bar - 130px width, right-aligned -->
+      <!-- Custom title bar - 230px width, right-aligned, all buttons clickable -->
 <div class="title-bar">
   <div class="title-bar-right">
+    <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
+    <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
     <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
     <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
     <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
-    <span class="version-text">v1.0.0</span>
+    <span class="version-text">v2.0.0</span>
     <button class="close-btn" onclick="closeApp()" title="Close">×</button>
   </div>
 </div>
@@ -332,8 +452,38 @@ function createWindow() {
         const statusIndicator = document.getElementById('statusIndicator');
         const bombToggleBtn = document.querySelector('.bomb-toggle-btn');
         
+       // Simple resize functions
+function makeSmaller() {
+  if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
+    window.electronAPI.getWindowBounds().then(bounds => {
+      const currentSize = bounds.width;
+      const newSize = Math.min(1200, Math.max(400, currentSize - 50));
+      window.electronAPI.resizeWindow(newSize, newSize);
+    }).catch(err => {
+      console.error('Error in getWindowBounds:', err);
+    });
+  } else {
+    console.error('electronAPI not available or missing methods');
+  }
+}
+
+function makeBigger() {
+  if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
+    window.electronAPI.getWindowBounds().then(bounds => {
+      const currentSize = bounds.width;
+      const newSize = Math.min(1200, Math.max(400, currentSize + 50));
+      window.electronAPI.resizeWindow(newSize, newSize);
+    }).catch(err => {
+      console.error('Error in getWindowBounds:', err);
+    });
+  } else {
+    console.error('electronAPI not available or missing methods');
+  }
+}
+        
         // Window control functions
         function refreshApp() {
+          console.log('refreshApp called');
           const iframeSrc = IS_DEV ? 'http://localhost:5173' : 'data:text/html,<h1>App Content</h1>';
           document.getElementById('mainIframe').src = iframeSrc;
         }
@@ -358,6 +508,7 @@ function createWindow() {
         
         // Function to toggle bomb display visibility
         function toggleBombDisplay() {
+          console.log('toggleBombDisplay called');
           bombDisplayVisible = !bombDisplayVisible;
           
           if (bombDisplayVisible) {
@@ -385,7 +536,9 @@ function createWindow() {
             <div class="status-indicator not-planted"></div>
           \`;
         }
+        
         function rotateRadar() {
+          console.log('rotateRadar called');
           fixedRotationOffset += 90;
           updateRotation();
         }
@@ -464,6 +617,17 @@ function createWindow() {
           }
         }
         
+        // Hide drag hint after a few seconds
+        setTimeout(() => {
+          const dragHint = document.querySelector('.drag-hint');
+          if (dragHint) {
+            dragHint.style.opacity = '0';
+            setTimeout(() => {
+              dragHint.style.display = 'none';
+            }, 300);
+          }
+        }, 3000);
+        
         // Listen for messages from the iframe (React app)
         window.addEventListener('message', (event) => {
           if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
@@ -510,6 +674,90 @@ function createWindow() {
             showDefaultBombStatus();
           }
         });
+        
+        // Add click event listeners to ensure buttons work
+        document.addEventListener('DOMContentLoaded', () => {
+          console.log('DOM loaded, setting up event listeners');
+          
+          // Double-check that all buttons have click handlers
+          const resizeMinusBtn = document.querySelector('.resize-btn-toolbar[onclick*="-50"]');
+          const resizePlusBtn = document.querySelector('.resize-btn-toolbar[onclick*="50"]');
+          const refreshBtn = document.querySelector('.refresh-btn');
+          const rotateBtn = document.querySelector('.rotate-btn');
+          const bombBtn = document.querySelector('.bomb-toggle-btn');
+          const closeBtn = document.querySelector('.close-btn');
+          
+          if (resizeMinusBtn) {
+            resizeMinusBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Resize minus clicked');
+              makeSmaller();
+            });
+          }
+          
+          if (resizePlusBtn) {
+            resizePlusBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Resize plus clicked');
+              makeBigger();
+            });
+          }
+          
+          if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Refresh clicked');
+              refreshApp();
+            });
+          }
+          
+          if (rotateBtn) {
+            rotateBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Rotate clicked');
+              rotateRadar();
+            });
+          }
+          
+          if (bombBtn) {
+            bombBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Bomb toggle clicked via event listener');
+              toggleBombDisplay();
+            });
+            
+            // Also add mousedown/mouseup for extra reliability
+            bombBtn.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            });
+            
+            bombBtn.addEventListener('mouseup', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Bomb toggle mouseup');
+              // Small delay to ensure it's not conflicting with other events
+              setTimeout(() => {
+                toggleBombDisplay();
+              }, 10);
+            });
+          }
+          
+          if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Close clicked');
+              closeApp();
+            });
+          }
+        });
+        
         console.log('HTML wrapper loaded, electronAPI available:', !!window.electronAPI);
         console.log('Development mode:', IS_DEV);
       </script>
@@ -530,22 +778,6 @@ function createWindow() {
   // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
-  });
-
-  // Force 1:1 aspect ratio when resizing
-  mainWindow.on('resize', () => {
-    const bounds = mainWindow.getBounds();
-    const size = Math.min(bounds.width, bounds.height);
-    
-    // Only resize if dimensions are different
-    if (bounds.width !== size || bounds.height !== size) {
-      mainWindow.setBounds({
-        x: bounds.x,
-        y: bounds.y,
-        width: size,
-        height: size
-      });
-    }
   });
 
   // Keep window always on top even when focus changes
@@ -619,6 +851,27 @@ ipcMain.handle('close-app', () => {
   console.log('IPC close-app handler called');
   if (mainWindow) {
     mainWindow.close();
+  }
+});
+
+// IPC handler for getting window bounds
+ipcMain.handle('get-window-bounds', () => {
+  if (mainWindow) {
+    return mainWindow.getBounds();
+  }
+  return null;
+});
+
+// IPC handler for resizing window
+ipcMain.handle('resize-window', (event, width, height) => {
+  if (mainWindow) {
+    const currentBounds = mainWindow.getBounds();
+    mainWindow.setBounds({
+      x: currentBounds.x,
+      y: currentBounds.y,
+      width: width,
+      height: height
+    });
   }
 });
 
