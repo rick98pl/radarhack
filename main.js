@@ -347,7 +347,7 @@ function createWindow() {
           <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
           <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
           <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
-          <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
+          <button class="rotate-btn" title="Rotate 90°">⟲</button>
           <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
           <span class="version-text">v2.0</span>
           <button class="close-btn" onclick="closeApp()" title="Close">×</button>
