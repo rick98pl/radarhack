@@ -384,7 +384,7 @@ function createWindow() {
       </div>
       <div class="bomb-status" id="bombStatus">
         <span class="bomb-icon">💣</span>
-        <span class="bomb-message">Not Planted (drag me)</span>
+        <span class="bomb-message">Not Planted (👆)</span>
         <div class="status-indicator not-planted"></div>
       </div>
 
@@ -464,7 +464,7 @@ function createWindow() {
           bombStatus.classList.add('force-visible');
           bombStatus.innerHTML = \`
             <span class="bomb-icon">💣</span>
-            <span class="bomb-message">Not Planted (drag me)</span>
+            <span class="bomb-message">Not Planted (👆)</span>
             <div class="status-indicator not-planted"></div>
           \`;
         }
@@ -494,7 +494,7 @@ function createWindow() {
   if (!bombData || !bombData.isPlanted) {
     bombStatus.innerHTML = \`
       <span class="bomb-icon">💣</span>
-      <span class="bomb-message">Not Planted (drag me)</span>
+      <span class="bomb-message">Not Planted (👆)</span>
       <div class="status-indicator not-planted"></div>
     \`;
     return;
