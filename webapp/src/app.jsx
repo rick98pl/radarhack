@@ -37,8 +37,52 @@ const App = () => {
   const [isElectronRotating, setIsElectronRotating] = useState(true);
   const [lastSentAngle, setLastSentAngle] = useState(0);
   
+  // NEW: Dynamic padding state
+  const [centerPadding, setCenterPadding] = useState(55);
+  
   // UI Controls visibility flag - set to false to hide all control buttons
   const [showUIControls, setShowUIControls] = useState(false);
+
+  // NEW: Listen for messages from Electron main process
+  useEffect(() => {
+    const handleParentMessage = (event) => {
+      // Make sure it's from the parent (Electron)
+      if (event.source !== window.parent) return;
+      
+      console.log('[REACT] 📨 Received message from Electron:', event.data);
+      
+      switch (event.data.type) {
+        case 'INCREASE_PADDING':
+          setCenterPadding(prev => {
+            const newValue = Math.min(200, prev + 5); // Max 200px
+            console.log('[REACT] 📏 Increasing padding:', prev, '→', newValue);
+            return newValue;
+          });
+          break;
+        case 'DECREASE_PADDING':
+          setCenterPadding(prev => {
+            const newValue = Math.max(0, prev - 5); // Min 0px
+            console.log('[REACT] 📏 Decreasing padding:', prev, '→', newValue);
+            return newValue;
+          });
+          break;
+        case 'SET_PADDING':
+          console.log('[REACT] 📏 Setting padding to:', Math.max(0, Math.min(200, event.data.value || 55)));
+          setCenterPadding(Math.max(0, Math.min(200, event.data.value || 55)));
+          break;
+        case 'TOGGLE_PLAYER_CARDS':
+          setShowPlayerCards(prev => !prev);
+          break;
+        case 'ROTATE_MAP':
+          setRotationOffset(prev => (prev + 90) % 360);
+          break;
+        // Add more cases as needed
+      }
+    };
+
+    window.addEventListener('message', handleParentMessage);
+    return () => window.removeEventListener('message', handleParentMessage);
+  }, []);
 
   // Get local player's view angle for radar rotation
   const getLocalPlayerViewAngle = () => {
@@ -120,6 +164,17 @@ const App = () => {
       setLastSentAngle(rotationAngle);
     }
   }, [playerArray, isElectronRotating, lastSentAngle]);
+
+  // NEW: Send padding updates to Electron for debugging/persistence
+  useEffect(() => {
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'PADDING_CHANGED',
+        padding: centerPadding,
+        timestamp: Date.now()
+      }, '*');
+    }
+  }, [centerPadding]);
 
   const handleRotateMap = () => {
     setRotationOffset(prev => (prev + 90) % 360);
@@ -340,7 +395,18 @@ const App = () => {
           </>
         )}
 
-        <div className={`flex items-center justify-center px-[55px] min-h-screen`}>
+        {/* UPDATED: Dynamic padding container with visual indicator */}
+        <div 
+          className="flex items-center justify-center min-h-screen transition-all duration-300"
+          style={{ paddingLeft: `${centerPadding}px`, paddingRight: `${centerPadding}px` }}
+        >
+          {/* Optional: Padding indicator for debugging (remove in production) */}
+          {showUIControls && (
+            <div className="absolute top-4 left-4 bg-black/60 text-white px-2 py-1 rounded text-sm font-mono">
+              Padding: {centerPadding}px
+            </div>
+          )}
+
           <Latency
            value={averageLatency}
            settings={settings}

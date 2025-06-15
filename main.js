@@ -3,6 +3,20 @@ const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow;
 const debug = false;
+
+// Function to send messages to React app
+function sendMessageToReact(messageData) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(`
+      const iframe = document.getElementById('mainIframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(${JSON.stringify(messageData)}, '*');
+        console.log('[ELECTRON] 📨 Sent message to React:', ${JSON.stringify(messageData)});
+      }
+    `);
+  }
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: displayWidth, height: displayHeight } = primaryDisplay.workAreaSize;
@@ -88,7 +102,7 @@ function createWindow() {
           position: fixed;
           top: 50px;
           right: 100px;
-          width: 198px;
+          width: 263px;
           height: 30px;
           background: rgba(0, 0, 0, 0.65);
           backdrop-filter: blur(10px);
@@ -116,7 +130,7 @@ function createWindow() {
           -webkit-app-region: no-drag !important;
           pointer-events: all !important;
         }
-        .refresh-btn, .rotate-btn, .bomb-toggle-btn, .resize-btn-toolbar, .close-btn {
+        .refresh-btn, .rotate-btn, .bomb-toggle-btn, .resize-btn-toolbar, .close-btn, .padding-btn {
           width: 24px !important;
           height: 24px !important;
           border: none !important;
@@ -140,7 +154,7 @@ function createWindow() {
           overflow: visible !important;
           touch-action: manipulation !important;
         }
-        .refresh-btn *, .rotate-btn *, .bomb-toggle-btn *, .resize-btn-toolbar *, .close-btn * {
+        .refresh-btn *, .rotate-btn *, .bomb-toggle-btn *, .resize-btn-toolbar *, .close-btn *, .padding-btn * {
           pointer-events: none !important;
           -webkit-app-region: no-drag !important;
         }
@@ -185,6 +199,29 @@ function createWindow() {
           font-size: 16px;
           font-weight: bold;
         }
+        
+        /* NEW: Padding control buttons */
+        .padding-btn {
+          background: rgba(147, 51, 234, 0.7) !important;
+          font-size: 14px !important;
+          font-weight: bold !important;
+        }
+        .padding-btn:hover {
+          background: rgba(147, 51, 234, 0.9) !important;
+        }
+        .padding-btn.increase {
+          background: rgba(34, 197, 94, 0.7) !important;
+        }
+        .padding-btn.increase:hover {
+          background: rgba(34, 197, 94, 0.9) !important;
+        }
+        .padding-btn.decrease {
+          background: rgba(239, 68, 68, 0.7) !important;
+        }
+        .padding-btn.decrease:hover {
+          background: rgba(239, 68, 68, 0.9) !important;
+        }
+        
         .version-text {
           color: rgba(255, 255, 255, 0.8);
           font-size: 11px;
@@ -372,6 +409,8 @@ function createWindow() {
         <div class="title-bar-right">
           <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
           <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
+          <button class="padding-btn decrease" onclick="decreasePadding()" title="Zoom Out - Decrease center padding by 5px">🔍</button>
+          <button class="padding-btn increase" onclick="increasePadding()" title="Zoom In - Increase center padding by 5px">🔍</button>
           <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
           <button class="rotate-btn" title="Rotate 90°">⟲</button>
           <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
@@ -404,6 +443,7 @@ function createWindow() {
         let fixedRotationOffset = 0;
         let bombDisplayVisible = true;
         let currentBombData = null;
+        let currentPadding = 55; // Track current padding value
         const iframe = document.getElementById('mainIframe');
         const IS_DEV = ${isDev};
         let rotationMessageCount = 0;
@@ -415,6 +455,33 @@ function createWindow() {
         const defuseTimer = document.getElementById('defuseTimer');
         const statusIndicator = document.getElementById('statusIndicator');
         const bombToggleBtn = document.querySelector('.bomb-toggle-btn');
+        
+        // NEW: Padding control functions
+        function increasePadding() {
+          currentPadding = Math.min(200, currentPadding + 5);
+          console.log('[ELECTRON] 📏 Increasing padding to:', currentPadding);
+          sendPaddingUpdate('INCREASE_PADDING');
+        }
+        
+        function decreasePadding() {
+          currentPadding = Math.max(0, currentPadding - 5);
+          console.log('[ELECTRON] 📏 Decreasing padding to:', currentPadding);
+          sendPaddingUpdate('DECREASE_PADDING');
+        }
+        
+        function sendPaddingUpdate(type) {
+          const iframe = document.getElementById('mainIframe');
+          if (iframe && iframe.contentWindow) {
+            const message = {
+              type: type,
+              value: currentPadding,
+              timestamp: Date.now()
+            };
+            iframe.contentWindow.postMessage(message, '*');
+            console.log('[ELECTRON] 📨 Sent padding message:', message);
+          }
+        }
+        
         function makeSmaller() {
           if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
             window.electronAPI.getWindowBounds().then(bounds => {
@@ -573,6 +640,14 @@ function createWindow() {
 
         window.addEventListener('message', (event) => {
           if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
+          
+          // NEW: Listen for padding updates from React
+          if (event.data.type === 'PADDING_CHANGED') {
+            currentPadding = event.data.padding;
+            console.log('[ELECTRON] 📏 React padding updated to:', currentPadding);
+            return;
+          }
+          
           if (event.data.type === 'BOMB_STATUS') {
             updateBombDisplay(event.data.bombStatus);
             return;
@@ -685,6 +760,11 @@ if (event.data.type === 'ROTATION_ANGLE') {
           const rotateBtn = document.querySelector('.rotate-btn');
           const bombBtn = document.querySelector('.bomb-toggle-btn');
           const closeBtn = document.querySelector('.close-btn');
+          
+          // NEW: Padding control buttons
+          const paddingDecreaseBtn = document.querySelector('.padding-btn.decrease');
+          const paddingIncreaseBtn = document.querySelector('.padding-btn.increase');
+          
           if (resizeMinusBtn) {
             resizeMinusBtn.addEventListener('click', (e) => {
               e.preventDefault();
@@ -699,6 +779,23 @@ if (event.data.type === 'ROTATION_ANGLE') {
               makeBigger();
             });
           }
+          
+          // NEW: Add event listeners for padding buttons
+          if (paddingDecreaseBtn) {
+            paddingDecreaseBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              decreasePadding();
+            });
+          }
+          if (paddingIncreaseBtn) {
+            paddingIncreaseBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              increasePadding();
+            });
+          }
+          
           if (refreshBtn) {
             refreshBtn.addEventListener('click', (e) => {
               e.preventDefault();
@@ -717,7 +814,6 @@ if (event.data.type === 'ROTATION_ANGLE') {
             bombBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              toggleBombDisplay();
             });
             bombBtn.addEventListener('mousedown', (e) => {
               e.preventDefault();
@@ -817,6 +913,20 @@ ipcMain.handle('resize-window', (event, width, height) => {
     });
   }
 });
+
+// NEW: IPC handlers for padding control (optional - for future expansion)
+ipcMain.handle('increase-padding', () => {
+  sendMessageToReact({ type: 'INCREASE_PADDING' });
+});
+
+ipcMain.handle('decrease-padding', () => {
+  sendMessageToReact({ type: 'DECREASE_PADDING' });
+});
+
+ipcMain.handle('set-padding', (event, value) => {
+  sendMessageToReact({ type: 'SET_PADDING', value: value });
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
