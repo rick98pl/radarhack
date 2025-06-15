@@ -478,58 +478,62 @@ function createWindow() {
           iframe.style.transform = \`rotate(\${totalRotation}deg)\`;
         }
         function updateBombDisplay(bombData) {
-          currentBombData = bombData;
-          if (!bombDisplayVisible) {
-            if (!bombData || !bombData.isPlanted || bombData.isDefused) {
-              bombStatus.classList.remove('visible');
-            } else {
-              bombStatus.classList.add('visible');
-            }
-            return;
-          }
-          bombStatus.classList.add('force-visible');
-          if (!bombData || !bombData.isPlanted) {
-            bombStatus.innerHTML = \`
-              <span class="bomb-icon">💣</span>
-              <span class="bomb-message">Not Planted</span>
-              <div class="status-indicator not-planted"></div>
-            \`;
-            return;
-          }
-          if (bombData.isDefused) {
-            bombStatus.innerHTML = \`
-              <span class="bomb-icon">✅</span>
-              <span class="bomb-message">Bomb Defused</span>
-              <div class="status-indicator defusing-safe"></div>
-            \`;
-            return;
-          }
-          if (bombData.isDefusing) {
-            const canDefuse = bombData.canDefuse;
-            const playerName = bombData.defusingPlayer ? bombData.defusingPlayer.name : 'Unknown';
-            bombStatus.innerHTML = \`
-              <span class="bomb-icon">💣</span>
-              <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
-              <div class="defuse-info">
-                <span style="font-size: 16px;">🔧</span>
-                <div>
-                  <div class="defuse-status \${canDefuse ? 'can-defuse' : 'too-late'}">\${canDefuse ? 'CAN DEFUSE' : 'TOO LATE!'}</div>
-                  <div class="defuse-player">\${playerName}</div>
-                </div>
-                <span class="defuse-timer">\${bombData.defuseTime.toFixed(1)}s</span>
-              </div>
-              <div class="status-indicator \${canDefuse ? 'defusing-safe' : 'defusing-danger'}"></div>
-            \`;
-          } else {
-            bombStatus.innerHTML = \`
-              <span class="bomb-icon">💣</span>
-              <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
-              <span class="bomb-message">Not Defused</span>
-              <div class="status-indicator not-defusing"></div>
-            \`;
-          }
-        }
+  currentBombData = bombData;
+  
+  // If bomb display is manually hidden, always respect that choice
+  if (!bombDisplayVisible) {
+    bombStatus.classList.remove('visible');
+    bombStatus.classList.remove('force-visible');
+    return; // Exit early - user wants it hidden regardless of bomb state
+  }
+  
+  // If display is enabled, force it to be visible
+  bombStatus.classList.add('force-visible');
 
+  // Handle the actual display content
+  if (!bombData || !bombData.isPlanted) {
+    bombStatus.innerHTML = \`
+      <span class="bomb-icon">💣</span>
+      <span class="bomb-message">Not Planted</span>
+      <div class="status-indicator not-planted"></div>
+    \`;
+    return;
+  }
+
+  if (bombData.isDefused) {
+    bombStatus.innerHTML = \`
+      <span class="bomb-icon">✅</span>
+      <span class="bomb-message">Bomb Defused</span>
+      <div class="status-indicator defusing-safe"></div>
+    \`;
+    return;
+  }
+
+  if (bombData.isDefusing) {
+    const canDefuse = bombData.canDefuse;
+    const playerName = bombData.defusingPlayer ? bombData.defusingPlayer.name : 'Unknown';
+    bombStatus.innerHTML = \`
+      <span class="bomb-icon">💣</span>
+      <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
+      <div class="defuse-info">
+        <span style="font-size: 16px;">🔧</span>
+        <div>
+          <div class="defuse-status \${canDefuse ? 'can-defuse' : 'too-late'}">\${canDefuse ? 'CAN DEFUSE' : 'TOO LATE!'}</div>
+          <div class="defuse-player">\${playerName}</div>
+        </div>
+        <span class="defuse-timer">\${bombData.defuseTime.toFixed(1)}s</span>
+      </div>
+      <div class="status-indicator \${canDefuse ? 'defusing-safe' : 'defusing-danger'}"></div>
+    \`;
+  } else {
+    bombStatus.innerHTML = \`
+      <span class="bomb-icon">💣</span>
+      <span class="bomb-timer">\${bombData.blowTime.toFixed(1)}s</span>
+      <span class="bomb-message">Not Defused</span>
+      <div class="status-indicator not-defusing"></div>
+    \`;
+  }
+}
        function updateRotationDebug(debugData) {
   let debugDiv = document.getElementById('rotationDebug');
   if (!debugDiv) {
