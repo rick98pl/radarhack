@@ -1,13 +1,4 @@
-// Hide drag hint after a few seconds
-        setTimeout(() => {
-          const dragHint = document.querySelector('.drag-hint');
-          if (dragHint) {
-            dragHint.style.opacity = '0';
-            setTimeout(() => {
-              dragHint.style.display = 'none';
-            }, 300);
-          }
-        }, 3000);const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 // Simple development check without external dependency
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -31,27 +22,25 @@ function createWindow() {
   
   const { width: displayWidth, height: displayHeight } = primaryDisplay.workAreaSize;
   
-  // Calculate center position for both x and y
-  const windowWidth = 615;
-  const windowHeight = 615;
-  const xPosition = Math.floor((displayWidth - windowWidth) / 2);
-  const yPosition = Math.floor((displayHeight - windowHeight) / 2);
+  // Calculate window size as 1/3 of monitor height (square window)
+  const windowSize = Math.floor(displayHeight / 2.25);
+  const xPosition = Math.floor((displayWidth - windowSize) / 2);
+  const yPosition = Math.floor((displayHeight - windowSize) / 2);
   
   // Debug: Log calculated values
   console.log('Display Width:', displayWidth);
   console.log('Display Height:', displayHeight);
-  console.log('Window Width:', windowWidth);
-  console.log('Window Height:', windowHeight);
+  console.log('Window Size (1/3 of height):', windowSize);
   console.log('Calculated X Position (centered):', xPosition);
   console.log('Calculated Y Position (centered):', yPosition);
   console.log('Window will be centered at:', xPosition, yPosition);
   
-  // Create the browser window - optimized size for radar
+  // Create the browser window - dynamic size based on monitor
   mainWindow = new BrowserWindow({
-    width: 615,  // Smaller, optimized size
-    height: 615, // Square window for circular radar
-    minWidth: 400,  // Minimum size
-    minHeight: 400, // Minimum size
+    width: windowSize,  // Dynamic size - 1/3 of monitor height
+    height: windowSize, // Square window for circular radar
+    minWidth: 200,  // Minimum size
+    minHeight: 200, // Minimum size
     maxWidth: 1200, // Maximum size
     maxHeight: 1200, // Maximum size
     x: xPosition,  // Dynamic x position - centered on screen
@@ -101,100 +90,120 @@ function createWindow() {
           height: 100vh;
           position: relative;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          /* NO DRAGGING AT ALL by default */
+          /* EVERYTHING is non-draggable by default */
           -webkit-app-region: no-drag;
         }
         
-        /* Custom title bar controls - MADE LONGER (230px) */
-.title-bar {
-  position: fixed;
-  top: 50px;
-  right: 0;
-  width: 210px; /* DECREASED: From 230px to 210px (-20px) */
-  height: 30px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  z-index: 1000;
-  -webkit-app-region: no-drag; /* CRITICAL: Make entire toolbar non-draggable */
-  padding-right: 8px;
-  box-sizing: border-box;
-}
+        /* Use a single size variable for both width and height */
+        :root {
+          --radar-size: min(calc(100vw - 200px), calc(100vh - 200px));
+        }
 
-/* REMOVED: drag region before element - no part of toolbar should be draggable */
-
-.title-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  -webkit-app-region: no-drag; /* Ensure button container is not draggable */
-}
+        /* ===== CRITICAL: TOOLBAR MUST NEVER EVER BE DRAGGABLE ===== */
+        /* ONLY THE RADAR IFRAME SHOULD BE DRAGGABLE */
+        /* =========================================================== */
         
+        .title-bar {
+          position: fixed;
+          top: 50px;
+          right: 100px; /* Moved 100px left from right edge */
+          width: 210px;
+          height: 30px;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(10px);
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          z-index: 1003; /* Highest z-index */
+          /* CRITICAL: TOOLBAR IS NEVER DRAGGABLE */
+          -webkit-app-region: no-drag !important;
+          padding-right: 8px;
+          box-sizing: border-box;
+          pointer-events: auto !important;
+        }
+
+        /* CRITICAL: Ensure EVERY part of toolbar is non-draggable */
+        .title-bar,
+        .title-bar *,
+        .title-bar-right,
+        .title-bar-right *,
+        .title-bar::before,
+        .title-bar::after {
+          -webkit-app-region: no-drag !important;
+          pointer-events: auto !important;
+        }
+
+        .title-bar-right {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex: none;
+          -webkit-app-region: no-drag !important;
+          pointer-events: auto !important;
+        }
+        
+        /* CRITICAL: ALL TOOLBAR BUTTONS ARE NON-DRAGGABLE */
         .refresh-btn, .rotate-btn, .bomb-toggle-btn, .resize-btn-toolbar, .close-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  transition: background 0.2s;
-  -webkit-app-region: no-drag; /* Explicitly no-drag for buttons */
-  pointer-events: auto; /* Ensure buttons are clickable */
-  position: relative;
-  z-index: 1001;
-  /* Ensure buttons are above everything else */
-  user-select: none;
-  -webkit-user-select: none;
-}
+          width: 24px;
+          height: 24px;
+          border: none;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          transition: background 0.2s;
+          -webkit-app-region: no-drag !important; /* NEVER DRAGGABLE */
+          pointer-events: auto !important; /* ALWAYS CLICKABLE */
+          position: relative;
+          z-index: 1004; /* Even higher z-index */
+          user-select: none;
+          -webkit-user-select: none;
+        }
 
-/* SPECIAL STYLING: Make refresh button green background */
-.refresh-btn {
-  background: rgba(34, 197, 94, 0.7); /* Green background for refresh button */
-}
+        /* SPECIAL STYLING: Make refresh button green background */
+        .refresh-btn {
+          background: rgba(34, 197, 94, 0.7); /* Green background for refresh button */
+        }
 
-.refresh-btn:hover {
-  background: rgba(34, 197, 94, 0.9); /* Darker green on hover */
-}
+        .refresh-btn:hover {
+          background: rgba(34, 197, 94, 0.9); /* Darker green on hover */
+        }
 
-.rotate-btn:hover, .bomb-toggle-btn:hover, .resize-btn-toolbar:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+        .rotate-btn:hover, .bomb-toggle-btn:hover, .resize-btn-toolbar:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
 
-.bomb-toggle-btn.active {
-  background: rgba(255, 193, 7, 0.6);
-}
+        .bomb-toggle-btn.active {
+          background: rgba(255, 193, 7, 0.6);
+        }
 
-.close-btn:hover {
-  background: rgba(255, 0, 0, 0.7);
-}
+        .close-btn:hover {
+          background: rgba(255, 0, 0, 0.7);
+        }
 
-.rotate-btn {
-  font-size: 14px;
-}
+        .rotate-btn {
+          font-size: 14px;
+        }
 
-.resize-btn-toolbar {
-  font-size: 16px;
-  font-weight: bold;
-}
+        .resize-btn-toolbar {
+          font-size: 16px;
+          font-weight: bold;
+        }
 
-.version-text {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 11px;
-  font-weight: 500;
-  margin-right: 4px;
-  -webkit-app-region: no-drag;
-  pointer-events: none;
-  position: relative;
-  z-index: 1001;
-}
+        .version-text {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 11px;
+          font-weight: 500;
+          margin-right: 4px;
+          -webkit-app-region: no-drag !important;
+          pointer-events: none;
+          position: relative;
+          z-index: 1004;
+        }
         
         .author-text {
           color: rgba(255, 255, 255, 0.8);
@@ -217,96 +226,97 @@ function createWindow() {
           padding: 20px;
           box-sizing: border-box;
           position: relative;
-          /* CHANGED: Move radar 150px to the right */
-          transform: translateX(100px);
-          /* NO DRAGGING by default */
+          /* Container is non-draggable */
           -webkit-app-region: no-drag;
         }
         
-       iframe {
-  /* Perfect circle - centered in viewport */
-  width: min(calc(100vw - 200px), calc(100vh - 200px));
-  height: min(calc(100vw - 200px), calc(100vh - 200px));
-  border: 2px solid #8b5cf6;
-  background: white;
-  border-radius: 50%;
-  
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 1px 4px rgba(0, 0, 0, 0.2);
-    
-  transform-origin: center center;
-  transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
-  
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  
-  outline: none;
-  -webkit-font-smoothing: antialiased;
-  
-  /* CHANGED: Make iframe draggable to move the entire window */
-  -webkit-app-region: drag;
-  pointer-events: auto;
-  cursor: move;
-}
+        /* ===== ONLY THE RADAR IFRAME IS DRAGGABLE ===== */
+        iframe {
+          /* Perfect circle - centered in viewport */
+          width: var(--radar-size);
+          height: var(--radar-size);
+          border: 2px solid #ef4444;
+          background: white;
+          border-radius: 50%;
+          
+          box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.3),
+            0 1px 4px rgba(0, 0, 0, 0.2);
+            
+          transform-origin: center center;
+          transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+          
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          -webkit-transform: translateZ(0);
+          transform: translateZ(0);
+          
+          outline: none;
+          -webkit-font-smoothing: antialiased;
+          
+          /* ONLY THE IFRAME IS DRAGGABLE */
+          -webkit-app-region: drag;
+          pointer-events: auto;
+          cursor: move;
+          z-index: 1; /* Lower z-index than toolbar */
+        }
 
-/* Override iframe dragging when hovering over interactive elements inside */
-iframe:hover {
-  cursor: move;
-}
+        /* Override iframe dragging when hovering over interactive elements inside */
+        iframe:hover {
+          cursor: move;
+        }
 
-/* Resize buttons - positioned under radar */
-.resize-btn {
-  position: fixed;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: bold;
-  transition: all 0.2s;
-  -webkit-app-region: no-drag;
-  z-index: 1001;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
+        /* Resize buttons - positioned under radar */
+        .resize-btn {
+          position: fixed;
+          width: 36px;
+          height: 36px;
+          border: none;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(10px);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          font-weight: bold;
+          transition: all 0.2s;
+          -webkit-app-region: no-drag !important;
+          z-index: 1002;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          pointer-events: auto !important;
+        }
 
-.resize-btn:hover {
-  background: rgba(139, 92, 246, 0.8);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
+        .resize-btn:hover {
+          background: rgba(139, 92, 246, 0.8);
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
 
-.resize-btn:active {
-  transform: scale(0.95);
-}
+        .resize-btn:active {
+          transform: scale(0.95);
+        }
 
-.resize-btn-minus {
-  /* Position under radar on the left */
-  top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 20px);
-  left: calc(50% + 100px - min(calc(100vw - 200px), calc(100vh - 200px))/2 - 50px);
-}
+        .resize-btn-minus {
+          /* Position under radar on the left */
+          top: calc(50% + var(--radar-size)/2 + 20px);
+          left: calc(50% - var(--radar-size)/2 - 50px);
+        }
 
-.resize-btn-plus {
-  /* Position under radar on the right */
-  top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 20px);
-  right: calc(50% - 100px - min(calc(100vw - 200px), calc(100vh - 200px))/2 + 50px);
-}
+        .resize-btn-plus {
+          /* Position under radar on the right */
+          top: calc(50% + var(--radar-size)/2 + 20px);
+          right: calc(50% - var(--radar-size)/2 - 50px);
+        }
 
         /* Bomb status display - completely separate from iframe */
         .bomb-status {
           position: fixed;
-          top: calc(50% + min(calc(100vw - 200px), calc(100vh - 200px))/2 + 30px); /* Position below iframe circle */
-          left: calc(50% + 100px); /* CHANGED: Offset bomb status to follow radar position */
+          top: calc(50% + var(--radar-size)/2 + 30px); /* Position below iframe circle */
+          left: 50%; /* Centered horizontally */
           transform: translateX(-50%);
           background: rgba(0, 0, 0, 0.85);
           backdrop-filter: blur(10px);
@@ -324,7 +334,8 @@ iframe:hover {
           min-width: 200px;
           justify-content: center;
           /* NO DRAGGING */
-          -webkit-app-region: no-drag;
+          -webkit-app-region: no-drag !important;
+          pointer-events: auto;
         }
 
         .bomb-status.visible {
@@ -405,23 +416,21 @@ iframe:hover {
           font-size: 14px;
           font-weight: 500;
         }
-
-
       </style>
     </head>
     <body>
-      <!-- Custom title bar - 230px width, right-aligned, all buttons clickable -->
-<div class="title-bar">
-  <div class="title-bar-right">
-    <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
-    <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
-    <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
-    <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
-    <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
-    <span class="version-text">v2.0.0</span>
-    <button class="close-btn" onclick="closeApp()" title="Close">×</button>
-  </div>
-</div>
+      <!-- CRITICAL: TOOLBAR IS NEVER DRAGGABLE - ONLY RADAR IS DRAGGABLE -->
+      <div class="title-bar">
+        <div class="title-bar-right">
+          <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
+          <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
+          <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
+          <button class="rotate-btn" onclick="rotateRadar()" title="Rotate 90°">⟲</button>
+          <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
+          <span class="version-text">v2.0</span>
+          <button class="close-btn" onclick="closeApp()" title="Close">×</button>
+        </div>
+      </div>
       
       <div class="iframe-container" id="iframeContainer">
         <iframe src="${iframeSrc}" frameborder="0" id="mainIframe"></iframe>
@@ -452,34 +461,34 @@ iframe:hover {
         const statusIndicator = document.getElementById('statusIndicator');
         const bombToggleBtn = document.querySelector('.bomb-toggle-btn');
         
-       // Simple resize functions
-function makeSmaller() {
-  if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
-    window.electronAPI.getWindowBounds().then(bounds => {
-      const currentSize = bounds.width;
-      const newSize = Math.min(1200, Math.max(400, currentSize - 50));
-      window.electronAPI.resizeWindow(newSize, newSize);
-    }).catch(err => {
-      console.error('Error in getWindowBounds:', err);
-    });
-  } else {
-    console.error('electronAPI not available or missing methods');
-  }
-}
+        // Simple resize functions
+        function makeSmaller() {
+          if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
+            window.electronAPI.getWindowBounds().then(bounds => {
+              const currentSize = bounds.width;
+              const newSize = Math.min(1200, Math.max(200, currentSize - 50));
+              window.electronAPI.resizeWindow(newSize, newSize);
+            }).catch(err => {
+              console.error('Error in getWindowBounds:', err);
+            });
+          } else {
+            console.error('electronAPI not available or missing methods');
+          }
+        }
 
-function makeBigger() {
-  if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
-    window.electronAPI.getWindowBounds().then(bounds => {
-      const currentSize = bounds.width;
-      const newSize = Math.min(1200, Math.max(400, currentSize + 50));
-      window.electronAPI.resizeWindow(newSize, newSize);
-    }).catch(err => {
-      console.error('Error in getWindowBounds:', err);
-    });
-  } else {
-    console.error('electronAPI not available or missing methods');
-  }
-}
+        function makeBigger() {
+          if (window.electronAPI && window.electronAPI.getWindowBounds && window.electronAPI.resizeWindow) {
+            window.electronAPI.getWindowBounds().then(bounds => {
+              const currentSize = bounds.width;
+              const newSize = Math.min(1200, Math.max(200, currentSize + 50));
+              window.electronAPI.resizeWindow(newSize, newSize);
+            }).catch(err => {
+              console.error('Error in getWindowBounds:', err);
+            });
+          } else {
+            console.error('electronAPI not available or missing methods');
+          }
+        }
         
         // Window control functions
         function refreshApp() {
@@ -617,17 +626,6 @@ function makeBigger() {
           }
         }
         
-        // Hide drag hint after a few seconds
-        setTimeout(() => {
-          const dragHint = document.querySelector('.drag-hint');
-          if (dragHint) {
-            dragHint.style.opacity = '0';
-            setTimeout(() => {
-              dragHint.style.display = 'none';
-            }, 300);
-          }
-        }, 3000);
-        
         // Listen for messages from the iframe (React app)
         window.addEventListener('message', (event) => {
           if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
@@ -675,13 +673,40 @@ function makeBigger() {
           }
         });
         
-        // Add click event listeners to ensure buttons work
+        // CRITICAL: Ensure toolbar buttons are never draggable
         document.addEventListener('DOMContentLoaded', () => {
           console.log('DOM loaded, setting up event listeners');
           
-          // Double-check that all buttons have click handlers
-          const resizeMinusBtn = document.querySelector('.resize-btn-toolbar[onclick*="-50"]');
-          const resizePlusBtn = document.querySelector('.resize-btn-toolbar[onclick*="50"]');
+          // Force all toolbar elements to be non-draggable
+          const toolbar = document.querySelector('.title-bar');
+          const allToolbarElements = toolbar.querySelectorAll('*');
+          
+          [toolbar, ...allToolbarElements].forEach(element => {
+            element.style.webkitAppRegion = 'no-drag';
+            element.style.pointerEvents = 'auto';
+          });
+          
+          // Double-check that all buttons have click handlers and are non-draggable
+          const buttons = document.querySelectorAll('.title-bar button, .resize-btn');
+          buttons.forEach(button => {
+            button.style.webkitAppRegion = 'no-drag';
+            button.style.pointerEvents = 'auto';
+            
+            // Prevent any dragging on buttons
+            button.addEventListener('mousedown', (e) => {
+              e.stopPropagation();
+            });
+            
+            button.addEventListener('dragstart', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            });
+          });
+          
+          // Setup button event listeners
+          const resizeMinusBtn = document.querySelector('.resize-btn-toolbar[title*="Decrease"]');
+          const resizePlusBtn = document.querySelector('.resize-btn-toolbar[title*="Increase"]');
           const refreshBtn = document.querySelector('.refresh-btn');
           const rotateBtn = document.querySelector('.rotate-btn');
           const bombBtn = document.querySelector('.bomb-toggle-btn');
@@ -836,6 +861,7 @@ function makeBigger() {
 app.whenReady().then(() => {
   createWindow();
   
+  // REMOVED: No setInterval with document access in main process
   // Set up periodic check to ensure window stays on top
   setInterval(() => {
     if (mainWindow && !mainWindow.isDestroyed()) {
