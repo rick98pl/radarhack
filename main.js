@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow;
+const debug = false;
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: displayWidth, height: displayHeight } = primaryDisplay.workAreaSize;
@@ -10,7 +11,7 @@ function createWindow() {
   const yPosition = Math.floor((displayHeight - windowSize) / 2);
   mainWindow = new BrowserWindow({
     width: windowSize,
-    height: windowSize,
+    height: Math.floor(windowSize * (debug ? 1.45 : 1)),
     minWidth: 200,
     minHeight: 200,
     maxWidth: 1200,
@@ -42,6 +43,31 @@ function createWindow() {
     <html>
     <head>
       <style>
+
+      .rotation-debug {
+  position: fixed;
+  top: calc(50% + var(--radar-size)/2 + 80px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: white;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 998;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 300px;
+  -webkit-app-region: no-drag;
+  display: none;
+}
+
+.rotation-debug.visible {
+  display: ${debug ? 'block' : 'none'};
+}
+
         body {
           margin: 0;
           padding: 0;
@@ -361,6 +387,18 @@ function createWindow() {
         <span class="bomb-message">Not Planted</span>
         <div class="status-indicator not-planted"></div>
       </div>
+
+      <div class="rotation-debug visible" id="rotationDebug">
+  <div style="font-weight: bold; margin-bottom: 8px; color: #fbbf24;">🔄 Rotation Debug</div>
+  <div>Target Angle: <span style="color: #60a5fa;">0.00°</span></div>
+  <div>Reversed Target: <span style="color: #f87171;">0.00°</span></div>
+  <div>Current Normalized: <span style="color: #34d399;">0.00°</span></div>
+  <div>Target Normalized: <span style="color: #fbbf24;">0.00°</span></div>
+  <div>Difference: <span style="color: #a78bfa;">0.00°</span></div>
+  <div>New Rotation: <span style="color: #fb7185;">0.00°</span></div>
+  <div>Total Rotation: <span style="color: #fde047;">0.00°</span></div>
+</div>
+
       <script>
         let currentRotation = 0;
         let fixedRotationOffset = 0;
@@ -368,6 +406,7 @@ function createWindow() {
         let currentBombData = null;
         const iframe = document.getElementById('mainIframe');
         const IS_DEV = ${isDev};
+        let rotationMessageCount = 0;
         const bombStatus = document.getElementById('bombStatus');
         const bombTimer = document.getElementById('bombTimer');
         const defuseInfo = document.getElementById('defuseInfo');
@@ -433,6 +472,7 @@ function createWindow() {
           fixedRotationOffset += 90;
           updateRotation();
         }
+          
         function updateRotation() {
           const totalRotation = currentRotation + fixedRotationOffset;
           iframe.style.transform = \`rotate(\${totalRotation}deg)\`;
@@ -489,28 +529,108 @@ function createWindow() {
             \`;
           }
         }
+
+       function updateRotationDebug(debugData) {
+  let debugDiv = document.getElementById('rotationDebug');
+  if (!debugDiv) {
+    debugDiv = document.createElement('div');
+    debugDiv.id = 'rotationDebug';
+    debugDiv.style.cssText = 
+      'position: fixed;' +
+      'top: calc(50% + var(--radar-size)/2 + 80px);' +
+      'left: 50%;' +
+      'transform: translateX(-50%);' +
+      'background: rgba(0, 0, 0, 0.85);' +
+      'backdrop-filter: blur(10px);' +
+      'border: 1px solid rgba(255, 255, 255, 0.2);' +
+      'border-radius: 12px;' +
+      'padding: 12px 20px;' +
+      'color: white;' +
+      'font-family: monospace;' +
+      'font-size: 12px;' +
+      'z-index: 998;' +
+      'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);' +
+      'min-width: 300px;' +
+      '-webkit-app-region: no-drag;';
+    document.body.appendChild(debugDiv);
+  }
+  
+  debugDiv.innerHTML = 
+    '<div style="font-weight: bold; margin-bottom: 8px; color: #fbbf24;">🔄 Rotation Debug</div>' +
+    '<div style="color: #ff6b6b; font-weight: bold;">Messages: <span style="color: #4ecdc4;">' + debugData.messageCount + '</span></div>' +
+    '<div>Player Facing: <span style="color: #60a5fa;">' + debugData.playerFacingAngle.toFixed(2) + '°</span></div>' +
+    '<div>Target Radar Rotation: <span style="color: #f87171;">' + debugData.targetRadarRotation.toFixed(2) + '°</span></div>' +
+    '<div>Current Normalized: <span style="color: #34d399;">' + debugData.currentNormalized.toFixed(2) + '°</span></div>' +
+    '<div>Target Normalized: <span style="color: #fbbf24;">' + debugData.targetNormalized.toFixed(2) + '°</span></div>' +
+    '<div>Difference: <span style="color: #a78bfa;">' + debugData.diff.toFixed(2) + '°</span></div>' +
+    '<div>New Rotation: <span style="color: #fb7185;">' + debugData.newRotation.toFixed(2) + '°</span></div>' +
+    '<div>Total Rotation: <span style="color: #fde047;">' + debugData.totalRotation.toFixed(2) + '°</span></div>';
+}
+
         window.addEventListener('message', (event) => {
           if (!IS_DEV || event.origin !== 'http://localhost:5173') return;
           if (event.data.type === 'BOMB_STATUS') {
             updateBombDisplay(event.data.bombStatus);
             return;
           }
-          if (event.data.type === 'ROTATION_ANGLE') {
-            const targetAngle = event.data.angle;
-            const reversedTargetAngle = -targetAngle - 90;
-            let currentNormalized = ((currentRotation % 360) + 360) % 360;
-            let targetNormalized = ((reversedTargetAngle % 360) + 360) % 360;
-            let diff = targetNormalized - currentNormalized;
-            if (diff > 180) {
-              diff -= 360;
-            } else if (diff < -180) {
-              diff += 360;
-            }
-            const newRotation = currentRotation + diff;
-            currentRotation = newRotation;
-            updateRotation();
-            return;
-          }
+
+// Replace the existing rotation message handler in the window.addEventListener('message') section
+// Find this part and replace it:
+
+if (event.data.type === 'ROTATION_ANGLE') {
+  // Add counter increment at the start
+  rotationMessageCount++;
+  
+  const targetAngle = event.data.angle; // Player's current facing angle
+  
+  // To keep player facing the same direction on screen, rotate radar in opposite direction
+  const targetRadarRotation = -targetAngle - 90;
+  
+  // Normalize current rotation to 0-360 range
+  let currentNormalized = ((currentRotation % 360) + 360) % 360;
+  
+  // Normalize target rotation to 0-360 range
+  let targetNormalized = ((targetRadarRotation % 360) + 360) % 360;
+  
+  // Calculate the shortest angular difference
+  let diff = targetNormalized - currentNormalized;
+  
+  // Ensure we take the shortest path (avoid spinning 270° when 90° would work)
+  if (diff > 180) {
+    diff -= 360;
+  } else if (diff < -180) {
+    diff += 360;
+  }
+  
+  // Apply the difference to current rotation for smooth transition
+  const newRotation = currentRotation + diff;
+  const totalRotation = newRotation + fixedRotationOffset;
+  
+  // Debug data object - now includes message count
+  const debugData = {
+    messageCount: rotationMessageCount,
+    playerFacingAngle: targetAngle,
+    targetRadarRotation: targetRadarRotation,
+    currentNormalized,
+    targetNormalized,
+    diff,
+    newRotation,
+    totalRotation
+  };
+  
+  // Update debug display
+  updateRotationDebug(debugData);
+  
+  // Console log for additional debugging
+  console.log('Rotation Debug:', debugData);
+  
+  // Update the current rotation state
+  currentRotation = newRotation;
+  
+  // Apply the rotation to the radar
+  updateRotation();
+  return;
+}
         });
         window.addEventListener('load', () => {
           if (bombDisplayVisible) {
