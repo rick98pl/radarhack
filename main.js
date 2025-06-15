@@ -409,8 +409,8 @@ function createWindow() {
         <div class="title-bar-right">
           <button class="resize-btn-toolbar" onclick="makeSmaller()" title="Decrease size by 50px">−</button>
           <button class="resize-btn-toolbar" onclick="makeBigger()" title="Increase size by 50px">+</button>
-          <button class="padding-btn decrease" onclick="decreasePadding()" title="Zoom Out - Decrease center padding by 5px">🔍</button>
-          <button class="padding-btn increase" onclick="increasePadding()" title="Zoom In - Increase center padding by 5px">🔍</button>
+          <button class="padding-btn decrease" onclick="increasePadding()" title="Zoom Out - Decrease center padding by 5px">🔍</button>
+          <button class="padding-btn increase" onclick="decreasePadding()" title="Zoom In - Increase center padding by 5px">🔍</button>
           <button class="refresh-btn" onclick="refreshApp()" title="Refresh">↻</button>
           <button class="rotate-btn" title="Rotate 90°">⟲</button>
           <button class="bomb-toggle-btn" onclick="toggleBombDisplay()" title="Toggle Bomb Status">💣</button>
@@ -785,14 +785,14 @@ if (event.data.type === 'ROTATION_ANGLE') {
             paddingDecreaseBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              decreasePadding();
+              increasePadding();
             });
           }
           if (paddingIncreaseBtn) {
             paddingIncreaseBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              increasePadding();
+              decreasePadding();
             });
           }
           
