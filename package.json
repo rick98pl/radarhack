@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "electron-is": "^3.0.0",
-    "electron-is-dev": "^3.0.1"
+    "electron-is-dev": "^3.0.1",
+    "express": "^5.1.0"
   },
   "build": {
     "appId": "com.yourcompany.radarhack",
@@ -35,7 +36,10 @@
       "main.js",
       "preload.js",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "usermode.exe",
+      "config.json",
+      "webapp/**/*"
     ],
     "extraFiles": [
       {

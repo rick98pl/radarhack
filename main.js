@@ -4,10 +4,77 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 
-
+let npmProcess = null;
+let usermodeProcess = null;
+function killExternalProcesses() {
+  console.log('[CLEANUP] Killing external processes...');
+  
+  if (process.platform === 'win32') {
+    // Kill usermode.exe with multiple methods
+    const killCommands = [
+      'taskkill /F /IM usermode.exe /T',
+      'wmic process where name="usermode.exe" delete',
+      'powershell "Get-Process usermode -ErrorAction SilentlyContinue | Stop-Process -Force"'
+    ];
+    
+    killCommands.forEach(cmd => {
+      exec(cmd, (err, stdout, stderr) => {
+        if (!err) {
+          console.log(`[CLEANUP] Success with command: ${cmd}`);
+        } else {
+          console.log(`[CLEANUP] Failed with command: ${cmd} - ${err.message}`);
+        }
+      });
+    });
+    
+    // Also kill by PID if we have it
+    if (usermodeProcess && usermodeProcess.pid) {
+      exec(`taskkill /F /PID ${usermodeProcess.pid} /T`, (err) => {
+        if (!err) {
+          console.log(`[CLEANUP] Killed usermode.exe by PID: ${usermodeProcess.pid}`);
+        }
+      });
+    }
+    
+    // Kill the npm process if it exists
+    if (npmProcess && npmProcess.pid) {
+      exec(`taskkill /F /PID ${npmProcess.pid} /T`, (err) => {
+        if (!err) {
+          console.log(`[CLEANUP] Killed npm process by PID: ${npmProcess.pid}`);
+        }
+      });
+    }
+    
+    // Kill node/npm processes
+    exec('taskkill /F /IM node.exe /T', (err) => {
+      if (!err) {
+        console.log('[CLEANUP] Killed all node.exe processes');
+      }
+    });
+  }
+}
 let mainWindow;
 const debug = false;
+function getResourcePath(filename) {
+  if (isDev) {
+    // In development, use __dirname
+    return path.join(__dirname, filename);
+  } else {
+    // In production, use the directory where the exe is located
+    // process.resourcesPath points to the resources folder next to the exe
+    return path.join(path.dirname(app.getPath('exe')), filename);
+  }
+}
 
+// Alternative method that works for files that should be outside the asar
+function getExternalResourcePath(filename) {
+  if (isDev) {
+    return path.join(__dirname, filename);
+  } else {
+    // This gets the directory of the actual .exe file
+    return path.join(process.cwd(), filename);
+  }
+}
 // Function to send messages to React app
 function sendMessageToReact(messageData) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -48,7 +115,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false,
       devTools: isDev,
-      preload: path.join(__dirname, 'preload.js')
+      preload: isDev ? path.join(__dirname, 'preload.js') : path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'assets/icon.png'),
     show: false
@@ -915,144 +982,87 @@ function checkCS2Running() {
     });
   });
 }
-function startBatchFile() {
+function startWebapp() {
   return new Promise(async (resolve) => {
-    console.log('[PROCESS] === BATCH FILE DEBUG START ===');
+    console.log('[PROCESS] === WEBAPP START DEBUG ===');
     
-    // Check if the webapp (npm run dev) is already running
-    try {
-      console.log('[PROCESS] Checking if webapp is already running...');
-      
-      const checkWebappRunning = () => {
-        return new Promise((resolveCheck) => {
-          // Check for node processes running the webapp
-          const cmd = 'wmic process where "name=\'node.exe\'" get commandline /format:csv';
+    // Check if webapp is already running
+    const checkWebappRunning = () => {
+      return new Promise((resolveCheck) => {
+        const cmd = 'wmic process where "name=\'node.exe\'" get commandline /format:csv';
+        
+        exec(cmd, (err, stdout) => {
+          if (err) {
+            console.log('[PROCESS] Error checking running processes: ' + err.message);
+            resolveCheck(false);
+            return;
+          }
           
-          exec(cmd, (err, stdout) => {
-            if (err) {
-              console.log('[PROCESS] Error checking running processes: ' + err.message);
-              resolveCheck(false);
-              return;
-            }
-            
-            // Look for npm run dev or webapp processes
-            const isWebappRunning = stdout.toLowerCase().includes('npm') && 
-                                  (stdout.toLowerCase().includes('dev') || 
-                                   stdout.toLowerCase().includes('webapp'));
-            
-            console.log('[PROCESS] webapp already running: ' + isWebappRunning);
-            if (isWebappRunning) {
-              console.log('[PROCESS] Found webapp/npm dev process in running processes');
-            }
-            resolveCheck(isWebappRunning);
-          });
+          const isWebappRunning = stdout.toLowerCase().includes('npm') && 
+                                (stdout.toLowerCase().includes('dev') || 
+                                 stdout.toLowerCase().includes('webapp'));
+          
+          console.log('[PROCESS] webapp already running: ' + isWebappRunning);
+          resolveCheck(isWebappRunning);
         });
-      };
-      
-      const webappAlreadyRunning = await checkWebappRunning();
-      
-      if (webappAlreadyRunning) {
-        console.log('[PROCESS] webapp is already running, skipping start.bat...');
-        console.log('[PROCESS] === BATCH FILE DEBUG END (WEBAPP ALREADY RUNNING) ===');
-        resolve(true);
-        return;
-      }
-      
-    } catch (checkError) {
-      console.error('[PROCESS] Error checking if webapp is running: ' + checkError.message);
-      console.log('[PROCESS] Continuing with start.bat attempt...');
+      });
+    };
+    
+    const webappAlreadyRunning = await checkWebappRunning();
+    
+    if (webappAlreadyRunning) {
+      console.log('[PROCESS] webapp is already running, skipping...');
+      resolve(true);
+      return;
     }
     
-    const batchPath = path.join(__dirname, 'start.bat');
-    
-    console.log('[PROCESS] __dirname: ' + __dirname);
-    console.log('[PROCESS] Looking for batch file at: ' + batchPath);
-    console.log('[PROCESS] File exists check: ' + fs.existsSync(batchPath));
-    
-    if (!fs.existsSync(batchPath)) {
-      console.log('[PROCESS] start.bat not found at: ' + batchPath);
-      try {
-        console.log('[PROCESS] Directory contents: ' + JSON.stringify(fs.readdirSync(__dirname)));
-      } catch (e) {
-        console.error('[PROCESS] Could not read directory: ' + e.message);
-      }
+    // Check if webapp directory exists
+    const webappPath = path.join(__dirname, 'webapp');
+    if (!fs.existsSync(webappPath)) {
+      console.error('[PROCESS] webapp directory not found at: ' + webappPath);
+      console.error('[PROCESS] Make sure you followed the instructions carefully');
       resolve(false);
       return;
     }
     
-    // Check file permissions and stats
+    console.log('[PROCESS] Starting webapp with npm run dev...');
+    
     try {
-      const stats = fs.statSync(batchPath);
-      console.log('[PROCESS] File stats: ' + JSON.stringify({
-        size: stats.size,
-        isFile: stats.isFile(),
-        mode: stats.mode.toString(8),
-        mtime: stats.mtime
-      }));
-    } catch (err) {
-      console.error('[PROCESS] Error reading file stats: ' + err.message);
+      npmProcess = spawn('npm', ['run', 'dev'], {
+        cwd: webappPath,
+        shell: true,
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      console.log('[PROCESS] npm process started with PID: ' + npmProcess.pid);
+      
+      npmProcess.on('error', (err) => {
+        console.error('[PROCESS] Error starting webapp: ' + err.message);
+      });
+      
+      npmProcess.unref();
+      console.log('[PROCESS] webapp started successfully');
+      resolve(true);
+      
+    } catch (error) {
+      console.error('[PROCESS] Failed to start webapp: ' + error.message);
+      resolve(false);
     }
-    
-    console.log('[PROCESS] Starting start.bat...');
-    console.log('[PROCESS] Current working directory: ' + process.cwd());
-    console.log('[PROCESS] Process platform: ' + process.platform);
-    
-    const startBatProcess = spawn('cmd.exe', ['/c', batchPath], {
-      cwd: __dirname,
-      detached: true,
-      stdio: 'ignore'
-    });
-    
-    console.log('[PROCESS] Spawn command executed');
-    console.log('[PROCESS] Process PID: ' + startBatProcess.pid);
-    
-    startBatProcess.on('spawn', () => {
-      console.log('[PROCESS] Process spawned successfully');
-    });
-    
-    startBatProcess.on('error', (err) => {
-      console.error('[PROCESS] Error starting start.bat: ' + err.message);
-    });
-    
-    // Unref and resolve immediately - don't wait for completion
-    startBatProcess.unref();
-    console.log('[PROCESS] start.bat started, resolving immediately');
-    console.log('[PROCESS] === BATCH FILE DEBUG END ===');
-    resolve(true);
   });
 }
+
 function startUsermodeExe() {
+  
   return new Promise((resolve) => {
     console.log('[PROCESS] === USERMODE EXE DEBUG START ===');
     console.log('[PROCESS] __dirname: ' + __dirname);
     
-    const exePath = path.join(__dirname, 'usermode', 'release', 'usermode.exe');
+    const exePath = getExternalResourcePath(path.join('usermode', 'release', 'usermode.exe'));
     console.log('[PROCESS] Looking for usermode.exe at: ' + exePath);
     console.log('[PROCESS] File exists check: ' + fs.existsSync(exePath));
     
     if (!fs.existsSync(exePath)) {
-      console.log('[PROCESS] usermode.exe not found at: ' + exePath);
-      
-      // Check if usermode directory exists
-      const usermodeDir = path.join(__dirname, 'usermode');
-      console.log('[PROCESS] Checking usermode directory: ' + usermodeDir);
-      console.log('[PROCESS] Usermode directory exists: ' + fs.existsSync(usermodeDir));
-      
-      if (fs.existsSync(usermodeDir)) {
-        try {
-          console.log('[PROCESS] Usermode directory contents: ' + JSON.stringify(fs.readdirSync(usermodeDir)));
-          
-          const releaseDir = path.join(usermodeDir, 'release');
-          console.log('[PROCESS] Release directory exists: ' + fs.existsSync(releaseDir));
-          
-          if (fs.existsSync(releaseDir)) {
-            console.log('[PROCESS] Release directory contents: ' + JSON.stringify(fs.readdirSync(releaseDir)));
-          }
-        } catch (e) {
-          console.error('[PROCESS] Error reading directories: ' + e.message);
-        }
-      }
-      
       resolve(false);
       return;
     }
@@ -1096,7 +1106,6 @@ function startUsermodeExe() {
     
     console.log('[PROCESS] Spawn options: ' + JSON.stringify(spawnOptions));
     
-    let usermodeProcess;
     
     try {
       // Try spawning with shell=true first (helps with permissions)
@@ -1191,8 +1200,8 @@ async function initializeApp() {
   console.log('[PROCESS] CS2.exe detected - starting external processes...');
   
   // Step 1: Start batch file and wait for it to complete
-  const batchSuccess = await startBatchFile();
-  if (!batchSuccess) {
+  const webappSuccess = await startWebapp();
+  if (!webappSuccess) {
     console.log('[PROCESS] start.bat failed or not found, continuing anyway...');
   }
   
@@ -1239,6 +1248,7 @@ app.whenReady().then(() => {
 });
 
 ipcMain.handle('close-app', () => {
+  killExternalProcesses();
   if (mainWindow) {
     mainWindow.close();
   }
@@ -1275,6 +1285,7 @@ ipcMain.handle('set-padding', (event, value) => {
 });
 
 app.on('window-all-closed', () => {
+  killExternalProcesses();
   if (process.platform !== 'darwin') {
     app.quit();
   }
