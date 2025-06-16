@@ -1,6 +1,10 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const { spawn, exec } = require('child_process');
+const fs = require('fs');
+
+
 let mainWindow;
 const debug = false;
 
@@ -49,6 +53,9 @@ function createWindow() {
     icon: path.join(__dirname, 'assets/icon.png'),
     show: false
   });
+ 
+
+
   mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   const iframeSrc = isDev ? 'http://localhost:5173' : 'data:text/html,<h1>App Content</h1>';
@@ -883,14 +890,354 @@ if (event.data.type === 'ROTATION_ANGLE') {
     return { action: 'deny' };
   });
 }
-app.whenReady().then(() => {
+console.log('[DEBUG] Script starting...');
+console.log('[DEBUG] App object:', !!app);
+console.log('[DEBUG] Process platform:', process.platform);
+console.log('[DEBUG] Current directory:', process.cwd());
+console.log('[DEBUG] __dirname:', __dirname);
+// Add this function before startBatchFile()
+function checkCS2Running() {
+  return new Promise((resolve) => {
+    console.log('[PROCESS] Checking if CS2.exe is running...');
+    
+    const cmd = process.platform === 'win32' 
+      ? 'tasklist /FI "IMAGENAME eq cs2.exe" /FO CSV | findstr /i "cs2.exe"'
+      : 'ps aux | grep -i cs2';
+    
+    exec(cmd, (err, stdout) => {
+      if (err || !stdout.includes('cs2.exe')) {
+        console.log('[PROCESS] CS2.exe is NOT running');
+        resolve(false);
+      } else {
+        console.log('[PROCESS] CS2.exe is running');
+        resolve(true);
+      }
+    });
+  });
+}
+function startBatchFile() {
+  return new Promise(async (resolve) => {
+    console.log('[PROCESS] === BATCH FILE DEBUG START ===');
+    
+    // Check if the webapp (npm run dev) is already running
+    try {
+      console.log('[PROCESS] Checking if webapp is already running...');
+      
+      const checkWebappRunning = () => {
+        return new Promise((resolveCheck) => {
+          // Check for node processes running the webapp
+          const cmd = 'wmic process where "name=\'node.exe\'" get commandline /format:csv';
+          
+          exec(cmd, (err, stdout) => {
+            if (err) {
+              console.log('[PROCESS] Error checking running processes: ' + err.message);
+              resolveCheck(false);
+              return;
+            }
+            
+            // Look for npm run dev or webapp processes
+            const isWebappRunning = stdout.toLowerCase().includes('npm') && 
+                                  (stdout.toLowerCase().includes('dev') || 
+                                   stdout.toLowerCase().includes('webapp'));
+            
+            console.log('[PROCESS] webapp already running: ' + isWebappRunning);
+            if (isWebappRunning) {
+              console.log('[PROCESS] Found webapp/npm dev process in running processes');
+            }
+            resolveCheck(isWebappRunning);
+          });
+        });
+      };
+      
+      const webappAlreadyRunning = await checkWebappRunning();
+      
+      if (webappAlreadyRunning) {
+        console.log('[PROCESS] webapp is already running, skipping start.bat...');
+        console.log('[PROCESS] === BATCH FILE DEBUG END (WEBAPP ALREADY RUNNING) ===');
+        resolve(true);
+        return;
+      }
+      
+    } catch (checkError) {
+      console.error('[PROCESS] Error checking if webapp is running: ' + checkError.message);
+      console.log('[PROCESS] Continuing with start.bat attempt...');
+    }
+    
+    const batchPath = path.join(__dirname, 'start.bat');
+    
+    console.log('[PROCESS] __dirname: ' + __dirname);
+    console.log('[PROCESS] Looking for batch file at: ' + batchPath);
+    console.log('[PROCESS] File exists check: ' + fs.existsSync(batchPath));
+    
+    if (!fs.existsSync(batchPath)) {
+      console.log('[PROCESS] start.bat not found at: ' + batchPath);
+      try {
+        console.log('[PROCESS] Directory contents: ' + JSON.stringify(fs.readdirSync(__dirname)));
+      } catch (e) {
+        console.error('[PROCESS] Could not read directory: ' + e.message);
+      }
+      resolve(false);
+      return;
+    }
+    
+    // Check file permissions and stats
+    try {
+      const stats = fs.statSync(batchPath);
+      console.log('[PROCESS] File stats: ' + JSON.stringify({
+        size: stats.size,
+        isFile: stats.isFile(),
+        mode: stats.mode.toString(8),
+        mtime: stats.mtime
+      }));
+    } catch (err) {
+      console.error('[PROCESS] Error reading file stats: ' + err.message);
+    }
+    
+    console.log('[PROCESS] Starting start.bat...');
+    console.log('[PROCESS] Current working directory: ' + process.cwd());
+    console.log('[PROCESS] Process platform: ' + process.platform);
+    
+    const startBatProcess = spawn('cmd.exe', ['/c', batchPath], {
+      cwd: __dirname,
+      detached: true,
+      stdio: 'ignore'
+    });
+    
+    console.log('[PROCESS] Spawn command executed');
+    console.log('[PROCESS] Process PID: ' + startBatProcess.pid);
+    
+    startBatProcess.on('spawn', () => {
+      console.log('[PROCESS] Process spawned successfully');
+    });
+    
+    startBatProcess.on('error', (err) => {
+      console.error('[PROCESS] Error starting start.bat: ' + err.message);
+    });
+    
+    // Unref and resolve immediately - don't wait for completion
+    startBatProcess.unref();
+    console.log('[PROCESS] start.bat started, resolving immediately');
+    console.log('[PROCESS] === BATCH FILE DEBUG END ===');
+    resolve(true);
+  });
+}
+function startUsermodeExe() {
+  return new Promise((resolve) => {
+    console.log('[PROCESS] === USERMODE EXE DEBUG START ===');
+    console.log('[PROCESS] __dirname: ' + __dirname);
+    
+    const exePath = path.join(__dirname, 'usermode', 'release', 'usermode.exe');
+    console.log('[PROCESS] Looking for usermode.exe at: ' + exePath);
+    console.log('[PROCESS] File exists check: ' + fs.existsSync(exePath));
+    
+    if (!fs.existsSync(exePath)) {
+      console.log('[PROCESS] usermode.exe not found at: ' + exePath);
+      
+      // Check if usermode directory exists
+      const usermodeDir = path.join(__dirname, 'usermode');
+      console.log('[PROCESS] Checking usermode directory: ' + usermodeDir);
+      console.log('[PROCESS] Usermode directory exists: ' + fs.existsSync(usermodeDir));
+      
+      if (fs.existsSync(usermodeDir)) {
+        try {
+          console.log('[PROCESS] Usermode directory contents: ' + JSON.stringify(fs.readdirSync(usermodeDir)));
+          
+          const releaseDir = path.join(usermodeDir, 'release');
+          console.log('[PROCESS] Release directory exists: ' + fs.existsSync(releaseDir));
+          
+          if (fs.existsSync(releaseDir)) {
+            console.log('[PROCESS] Release directory contents: ' + JSON.stringify(fs.readdirSync(releaseDir)));
+          }
+        } catch (e) {
+          console.error('[PROCESS] Error reading directories: ' + e.message);
+        }
+      }
+      
+      resolve(false);
+      return;
+    }
+    
+    // Check file permissions and stats
+    try {
+      const stats = fs.statSync(exePath);
+      console.log('[PROCESS] File stats: ' + JSON.stringify({
+        size: stats.size,
+        isFile: stats.isFile(),
+        mode: stats.mode.toString(8),
+        mtime: stats.mtime
+      }));
+      
+      // Check if file is readable and executable
+      try {
+        fs.accessSync(exePath, fs.constants.F_OK | fs.constants.R_OK);
+        console.log('[PROCESS] File is readable: true');
+      } catch (accessErr) {
+        console.error('[PROCESS] File access error: ' + accessErr.message);
+      }
+      
+    } catch (err) {
+      console.error('[PROCESS] Error reading file stats: ' + err.message);
+    }
+    
+    console.log('[PROCESS] Starting usermode.exe...');
+    console.log('[PROCESS] Current working directory: ' + process.cwd());
+    console.log('[PROCESS] Target working directory: ' + path.dirname(exePath));
+    console.log('[PROCESS] Process platform: ' + process.platform);
+    console.log('[PROCESS] Process arch: ' + process.arch);
+    
+    // Try different spawn options to bypass permission issues
+    const spawnOptions = {
+      cwd: path.dirname(exePath),
+      detached: true,
+      stdio: 'ignore',
+      shell: true,  // Add shell option to help with permissions
+      windowsHide: true  // Hide the window on Windows
+    };
+    
+    console.log('[PROCESS] Spawn options: ' + JSON.stringify(spawnOptions));
+    
+    let usermodeProcess;
+    
+    try {
+      // Try spawning with shell=true first (helps with permissions)
+      usermodeProcess = spawn(exePath, [], spawnOptions);
+      console.log('[PROCESS] Spawn command executed with shell=true');
+    } catch (spawnError) {
+      console.error('[PROCESS] Initial spawn failed: ' + spawnError.message);
+      
+      // Try alternative method with cmd.exe
+      try {
+        console.log('[PROCESS] Trying alternative spawn method with cmd.exe...');
+        usermodeProcess = spawn('cmd.exe', ['/c', `"${exePath}"`], {
+          cwd: path.dirname(exePath),
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true
+        });
+        console.log('[PROCESS] Alternative spawn executed');
+      } catch (altError) {
+        console.error('[PROCESS] Alternative spawn also failed: ' + altError.message);
+        resolve(false);
+        return;
+      }
+    }
+    
+    if (usermodeProcess && usermodeProcess.pid) {
+      console.log('[PROCESS] Process PID: ' + usermodeProcess.pid);
+    } else {
+      console.log('[PROCESS] Process PID: undefined (process may not have started)');
+    }
+    
+    usermodeProcess.on('spawn', () => {
+      console.log('[PROCESS] usermode.exe spawned successfully');
+      console.log('[PROCESS] === USERMODE EXE DEBUG END (SUCCESS) ===');
+      usermodeProcess.unref();
+      resolve(true);
+    });
+    
+    usermodeProcess.on('error', (err) => {
+      console.error('[PROCESS] Error starting usermode.exe: ' + err.message);
+      console.error('[PROCESS] Error code: ' + err.code);
+      console.error('[PROCESS] Error errno: ' + err.errno);
+      console.error('[PROCESS] Error syscall: ' + err.syscall);
+      console.error('[PROCESS] Error path: ' + err.path);
+      
+      // Provide specific guidance for EACCES error
+      if (err.code === 'EACCES') {
+        console.error('[PROCESS] EACCES error suggests:');
+        console.error('[PROCESS] 1. File permissions issue');
+        console.error('[PROCESS] 2. Antivirus blocking execution');
+        console.error('[PROCESS] 3. Windows SmartScreen blocking');
+        console.error('[PROCESS] 4. File is not a valid executable');
+        console.error('[PROCESS] Try: Right-click usermode.exe -> Properties -> Unblock');
+      }
+      
+      console.log('[PROCESS] === USERMODE EXE DEBUG END (ERROR) ===');
+      resolve(false);
+    });
+    
+    // Set a short timeout to resolve if spawn event doesn't fire
+    setTimeout(() => {
+      if (usermodeProcess && !usermodeProcess.killed) {
+        console.log('[PROCESS] Process appears to be running, resolving as success');
+        usermodeProcess.unref();
+        resolve(true);
+      }
+    }, 2000);
+  });
+}
+const enableExternalProcesses = true;
+async function initializeApp() {
+  process.stdout.write('INIT: Starting initialization sequence...\n');
+  console.log('[PROCESS] Starting initialization sequence...');
+  
+  const cs2Running = await checkCS2Running();
+  if (enableExternalProcesses && !cs2Running) {
+    console.log('[PROCESS] CS2.exe not running - skipping external processes');
+    return;
+  }
+  
+  // Check if external processes are enabled
+  if (!enableExternalProcesses) {
+    console.log('[PROCESS] External processes disabled by global variable');
+    console.log('[PROCESS] Creating main window...');
+    createWindow();
+    return;
+  }
+  
+  // Check if CS2 is running
+  
+  // CS2 is running and external processes are enabled
+  console.log('[PROCESS] CS2.exe detected - starting external processes...');
+  
+  // Step 1: Start batch file and wait for it to complete
+  const batchSuccess = await startBatchFile();
+  if (!batchSuccess) {
+    console.log('[PROCESS] start.bat failed or not found, continuing anyway...');
+  }
+  
+  // Step 2: Start usermode.exe only if batch succeeded (or continue anyway)
+  const usermodeSuccess = await startUsermodeExe();
+  if (!usermodeSuccess) {
+    console.log('[PROCESS] usermode.exe failed or not found, continuing anyway...');
+  }
+  
+  // Step 3: Create window only after both processes are handled
+  console.log('[PROCESS] Creating main window...');
   createWindow();
+}
+let isInitialized = false;
+app.whenReady().then(() => {
+
+  if (isInitialized) {
+    console.log('[DEBUG] Already initialized, skipping...');
+    return;
+  }
+  isInitialized = true;
+
+  console.log('[DEBUG] App is ready!');
+  
+  console.log('[DEBUG] About to call initializeApp()');
+  
+  try {
+    initializeApp();
+    console.log('[DEBUG] initializeApp() called successfully');
+  } catch (error) {
+    console.error('[DEBUG] Error calling initializeApp():', error);
+  }
+  
+  console.log('[DEBUG] Setting up interval');
   setInterval(() => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
     }
   }, 5000);
+  
+  console.log('[DEBUG] App ready setup complete');
+}).catch((error) => {
+  console.error('[DEBUG] App ready failed:', error);
 });
+
 ipcMain.handle('close-app', () => {
   if (mainWindow) {
     mainWindow.close();
